@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mission Management</title>
+  <title>Mission Management with Firebase</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 1rem; background: #f5f5f5; }
     section { margin-bottom: 2rem; }
@@ -28,32 +28,34 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+    #createAccountSection { display: none; }
   </style>
+
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <!-- Firebase Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
 <!-- LOGIN SECTION -->
 <div id="loginSection">
   <h2>Mission Access</h2>
-  <input type="text" id="usernameInput" placeholder="Username" />
-  <input type="password" id="passwordInput" placeholder="Password" />
+  <input type="text" id="usernameInput" placeholder="Username" autocomplete="username" />
+  <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password" />
   <button id="loginBtn">Login</button>
   <button id="createAccountBtn">Create Account</button>
   <p id="loginError" style="color:red;"></p>
 </div>
 
 <!-- CREATE ACCOUNT SECTION -->
-<div id="createAccountSection" style="display:none;">
+<div id="createAccountSection">
   <h2>Request an Account</h2>
   <p>
     To request an account, please email <strong>Kendrick Uhles</strong> and CC <strong>Laramie Uhles</strong>.<br />
     Include your desired <strong>username</strong> and <strong>password</strong>.
   </p>
-  <p>Email Kendrick: 
-    <a href="mailto:kendrick.uhles@cawgcap.org?cc=laramie.uhles@cawgcap.org&subject=Mission%20System%20Account%20Request">
-      kendrick.uhles@cawgcap.org
-    </a>
-  </p>
+  <p>Email Kendrick: <a href="mailto:Kendrick.Uhles@cawgcap.org?cc=Laramie.Uhles@cawgcap.org&subject=Mission%20System%20Account%20Request">Kendrick.Uhles@cawgcap.org</a></p>
   <button id="backToLoginBtn">&larr; Back to Login</button>
 </div>
 
@@ -94,42 +96,60 @@
 </div>
 
 <script>
-  // Simple in-code login users
+  // Your Firebase config - replace with your actual config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbkgmgqYqatkhmfDKnLHa4S52z9Jcz1lw",
+    authDomain: "mission-9dd26.firebaseapp.com",
+    databaseURL: "https://mission-9dd26-default-rtdb.firebaseio.com",
+    projectId: "mission-9dd26",
+    storageBucket: "mission-9dd26.appspot.com",
+    messagingSenderId: "1080303837931",
+    appId: "1:1080303837931:web:9b5ed2486bd6a2e70914ae",
+    measurementId: "G-NWFV3RFGKV"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  // Hardcoded user logins (for demo)
   const USERS = {
     "CommanderK": "SecurePass123",
     "LaramieU": "RadioOps456",
     "TestUser": "TestPass789"
   };
 
-  // Login button event
+  const loginSection = document.getElementById('loginSection');
+  const createAccountSection = document.getElementById('createAccountSection');
+  const mainApp = document.getElementById('mainApp');
+  const loginError = document.getElementById('loginError');
+
   document.getElementById('loginBtn').onclick = () => {
     const user = document.getElementById('usernameInput').value.trim();
     const pass = document.getElementById('passwordInput').value;
-
     if (USERS[user] === pass) {
-      document.getElementById('loginSection').style.display = 'none';
-      document.getElementById('mainApp').style.display = 'block';
-      document.getElementById('loginError').textContent = '';
+      loginError.textContent = "";
+      loginSection.style.display = 'none';
+      mainApp.style.display = 'block';
+      loadMissionsFromFirebase();
     } else {
-      document.getElementById('loginError').textContent = "Incorrect username or password.";
+      loginError.textContent = "Incorrect username or password.";
     }
   };
 
-  // Show create account info
   document.getElementById('createAccountBtn').onclick = () => {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('createAccountSection').style.display = 'block';
+    loginSection.style.display = 'none';
+    createAccountSection.style.display = 'block';
   };
 
-  // Back to login from create account
   document.getElementById('backToLoginBtn').onclick = () => {
-    document.getElementById('createAccountSection').style.display = 'none';
-    document.getElementById('loginSection').style.display = 'block';
-    document.getElementById('loginError').textContent = '';
+    createAccountSection.style.display = 'none';
+    loginSection.style.display = 'block';
+    loginError.textContent = "";
   };
 
-  // Mission data and state
-  const missions = [];
+  // Missions stored locally for UI
+  let missions = [];
   let currentMission = null;
 
   const missionListEl = document.getElementById('missionList');
@@ -142,13 +162,12 @@
   const commsLogEl = document.getElementById('commsLog');
   const fileListEl = document.getElementById('fileList');
 
-  // Update mission name display on all sections
   function updateMissionDisplays() {
     const name = currentMission ? currentMission.name : 'None';
     currentMissionNameEls.forEach(el => el.textContent = name);
   }
 
-  // Refresh mission list with buttons
+  // Render mission list
   function refreshMissionList() {
     missionListEl.innerHTML = '';
     missions.forEach((m, i) => {
@@ -163,6 +182,10 @@
       };
       missionListEl.appendChild(btn);
     });
+
+    if (missions.length === 0) {
+      missionListEl.textContent = 'No missions yet.';
+    }
   }
 
   // Render chat messages
@@ -179,7 +202,7 @@
     });
   }
 
-  // Render comms log entries
+  // Render comms logs
   function renderComms() {
     if (!currentMission) {
       commsLogEl.textContent = 'Select a mission';
@@ -193,7 +216,7 @@
     });
   }
 
-  // Render uploaded files list
+  // Render file list
   function renderFiles() {
     if (!currentMission) {
       fileListEl.innerHTML = '<li>Select a mission</li>';
@@ -207,7 +230,7 @@
     });
   }
 
-  // Create mission button event
+  // Add new mission locally AND save to Firebase
   document.getElementById('createMissionBtn').onclick = () => {
     const input = document.getElementById('newMissionName');
     const name = input.value.trim();
@@ -215,52 +238,95 @@
       alert('Please enter a mission name');
       return;
     }
+    // Prepare new mission object
     const newMission = { name, chat: [], comms: [], files: [] };
-    missions.push(newMission);
-    currentMission = newMission;
-    updateMissionDisplays();
-    refreshMissionList();
-    input.value = '';
-    renderChat();
-    renderComms();
-    renderFiles();
+
+    // Push to Firebase
+    const newMissionRef = database.ref('missions').push();
+    newMissionRef.set(newMission)
+      .then(() => {
+        input.value = '';
+        loadMissionsFromFirebase(); // Reload missions from Firebase to update UI
+      })
+      .catch(err => alert("Error saving mission: " + err.message));
   };
 
-  // Send chat message event
+  // Send chat message (locally and save to Firebase)
   document.getElementById('sendChatBtn').onclick = () => {
     const input = document.getElementById('chatInput');
-    if (!currentMission) return alert('Select a mission first');
     const msg = input.value.trim();
-    if (!msg) return;
+    if (!msg || !currentMission) return alert('Select a mission first');
     currentMission.chat.push(msg);
+
+    // Update Firebase
+    updateMissionInFirebase(currentMission);
     input.value = '';
     renderChat();
   };
 
-  // Log comms event
+  // Log comms (locally and save to Firebase)
   document.getElementById('logCommsBtn').onclick = () => {
     const input = document.getElementById('commsInput');
-    if (!currentMission) return alert('Select a mission first');
     const log = input.value.trim();
-    if (!log) return;
+    if (!log || !currentMission) return alert('Select a mission first');
     currentMission.comms.push(log);
+
+    // Update Firebase
+    updateMissionInFirebase(currentMission);
     input.value = '';
     renderComms();
   };
 
-  // Upload file event
+  // Upload file (just store name locally and in Firebase)
   document.getElementById('uploadFileBtn').onclick = () => {
-    if (!currentMission) return alert('Select a mission first');
     const fileInput = document.getElementById('fileUpload');
-    if (!fileInput.files.length) return alert('Select a file to upload');
+    if (!fileInput.files.length || !currentMission) return alert('Select a mission first');
     currentMission.files.push({ name: fileInput.files[0].name });
+
+    updateMissionInFirebase(currentMission);
     fileInput.value = '';
     renderFiles();
   };
 
-  // Initialize
-  refreshMissionList();
-  updateMissionDisplays();
+  // Helper: Update a mission in Firebase by matching name (inefficient for demo)
+  function updateMissionInFirebase(mission) {
+    // Find mission by name in Firebase and update it
+    database.ref('missions').orderByChild('name').equalTo(mission.name).once('value', snapshot => {
+      const updates = {};
+      snapshot.forEach(childSnapshot => {
+        updates[childSnapshot.key] = mission;
+      });
+      if (Object.keys(updates).length > 0) {
+        database.ref('missions').update(updates)
+          .catch(err => console.error("Failed to update mission:", err));
+      }
+    });
+  }
+
+  // Load all missions from Firebase and update local list + UI
+  function loadMissionsFromFirebase() {
+    database.ref('missions').once('value')
+      .then(snapshot => {
+        const data = snapshot.val();
+        missions = [];
+        if (data) {
+          // Convert object to array of missions
+          for (const key in data) {
+            if (Object.hasOwnProperty.call(data, key)) {
+              missions.push(data[key]);
+            }
+          }
+        }
+        currentMission = null;
+        updateMissionDisplays();
+        refreshMissionList();
+      })
+      .catch(err => {
+        console.error("Error loading missions:", err);
+        alert("Error loading missions: " + err.message);
+      });
+  }
 </script>
+
 </body>
 </html>
