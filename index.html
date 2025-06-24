@@ -5,205 +5,157 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mission Management</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 1rem; }
-    h2 { border-bottom: 1px solid #ccc; }
+    body { font-family: Arial, sans-serif; margin: 1rem; background: #f5f5f5; }
     section { margin-bottom: 2rem; }
-    button { cursor: pointer; }
-
-    #missionListContainer, #missionInfoContainer {
-      display: none;
-    }
-
-    #missionListContainer.active,
-    #missionInfoContainer.active {
+    h2 { border-bottom: 1px solid #ccc; }
+    input, button, textarea {
+      margin-top: 0.5rem;
       display: block;
+      padding: 0.5rem;
+      font-size: 1rem;
     }
-
-    #missionList {
+    #chatMessages, #commsLog, #fileList {
       border: 1px solid #ccc;
-      max-height: 300px;
+      height: 150px;
       overflow-y: auto;
       padding: 0.5rem;
     }
-
-    #missionList div {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.25rem;
-      padding: 0.25rem;
-      background: #f9f9f9;
-    }
-
-    #missionList span {
-      flex-grow: 1;
-      margin-right: 1rem;
-    }
-
-    #missionList button {
-      margin-left: 0.3rem;
-      padding: 0.3rem 0.6rem;
-    }
-
-    #createMissionBtn {
-      float: right;
-      margin-bottom: 1rem;
-    }
-
-    #missionTabs button {
-      padding: 0.5rem 1rem;
-      margin-right: 0.5rem;
-      border: none;
-      background: #eee;
-      font-weight: bold;
-    }
-
-    #missionTabs button.active {
-      background: #007BFF;
-      color: white;
-    }
-
-    .tabContent {
-      display: none;
-    }
-
-    .tabContent.active {
-      display: block;
-    }
-
-    #backBtn {
-      margin-bottom: 1rem;
-      background: #888;
-      color: white;
-      padding: 0.5rem 1rem;
-      border: none;
-    }
-
-    .deleteBtn {
-      background: #c00;
-      color: white;
+    #loginSection, #createAccountSection {
+      max-width: 400px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
 
-<h1>Mission Management</h1>
-
-<!-- Mission List Page -->
-<div id="missionListContainer" class="active">
-  <button id="createMissionBtn">Create Mission</button>
-  <h2>Missions</h2>
-  <input type="text" id="missionSearch" placeholder="Search missions..." />
-  <div id="missionList"></div>
+<!-- LOGIN SECTION -->
+<div id="loginSection">
+  <h2>Mission Access</h2>
+  <input type="text" id="usernameInput" placeholder="Username" />
+  <input type="password" id="passwordInput" placeholder="Password" />
+  <button id="loginBtn">Login</button>
+  <button id="createAccountBtn">Create Account</button>
+  <p id="loginError" style="color:red;"></p>
 </div>
 
-<!-- Mission Info Page -->
-<div id="missionInfoContainer">
-  <button id="backBtn">← Back to Missions</button>
-  <h2 id="missionTitle"></h2>
+<!-- CREATE ACCOUNT SECTION -->
+<div id="createAccountSection" style="display:none;">
+  <h2>Request an Account</h2>
+  <p>
+    To request an account, please email <strong>Kendrick Uhles</strong> and CC <strong>Laramie Uhles</strong>.<br />
+    Include your desired <strong>username</strong> and <strong>password</strong>.
+  </p>
+  <p>Email Kendrick: <a href="mailto:kendrickuhles@example.com?cc=laramieuhles@example.com&subject=Mission%20System%20Account%20Request">kendrickuhles@example.com</a></p>
+  <button id="backToLoginBtn">&larr; Back to Login</button>
+</div>
 
-  <div id="missionTabs">
-    <button data-tab="chat" class="tabBtn active">Chat</button>
-    <button data-tab="comms" class="tabBtn">Comms Log</button>
-    <button data-tab="files" class="tabBtn">Files</button>
-  </div>
+<!-- MAIN APP SECTION -->
+<div id="mainApp" style="display:none;">
+  <h1>Mission Management (Rough)</h1>
 
-  <div id="chat" class="tabContent active">
-    <h3>Chat</h3>
-    <div id="chatMessages" style="border:1px solid #ccc; height:150px; overflow-y:auto; padding:0.5rem;"></div>
+  <section id="missions">
+    <h2>Missions</h2>
+    <div id="missionList"></div>
+    <input type="text" id="newMissionName" placeholder="New mission name" />
+    <button id="createMissionBtn">Create Mission</button>
+  </section>
+
+  <section id="chat">
+    <h2>Chat</h2>
+    <p>Mission: <span id="currentMissionName">None</span></p>
+    <div id="chatMessages"></div>
     <input type="text" id="chatInput" placeholder="Type a message" />
     <button id="sendChatBtn">Send</button>
-  </div>
+  </section>
 
-  <div id="comms" class="tabContent">
-    <h3>Comms Log</h3>
-    <div id="commsLog" style="border:1px solid #ccc; height:150px; overflow-y:auto; padding:0.5rem;"></div>
+  <section id="comms">
+    <h2>Comms Log</h2>
+    <p>Mission: <span id="currentMissionName2">None</span></p>
+    <div id="commsLog"></div>
     <input type="text" id="commsInput" placeholder="Log entry" />
     <button id="logCommsBtn">Log</button>
-  </div>
+  </section>
 
-  <div id="files" class="tabContent">
-    <h3>Files</h3>
+  <section id="files">
+    <h2>Files</h2>
+    <p>Mission: <span id="currentMissionName3">None</span></p>
     <input type="file" id="fileUpload" />
     <button id="uploadFileBtn">Upload</button>
     <ul id="fileList"></ul>
-  </div>
+  </section>
 </div>
 
 <script>
+  const USERS = {
+    "CommanderK": "SecurePass123",
+    "LaramieU": "RadioOps456"
+  };
+
+  document.getElementById('loginBtn').onclick = () => {
+    const user = document.getElementById('usernameInput').value.trim();
+    const pass = document.getElementById('passwordInput').value;
+
+    if (USERS[user] === pass) {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+    } else {
+      document.getElementById('loginError').textContent = "Incorrect username or password.";
+    }
+  };
+
+  document.getElementById('createAccountBtn').onclick = () => {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('createAccountSection').style.display = 'block';
+  };
+
+  document.getElementById('backToLoginBtn').onclick = () => {
+    document.getElementById('createAccountSection').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'block';
+  };
+
   const missions = [];
   let currentMission = null;
 
-  const missionListContainer = document.getElementById('missionListContainer');
-  const missionInfoContainer = document.getElementById('missionInfoContainer');
-  const missionTitle = document.getElementById('missionTitle');
   const missionListEl = document.getElementById('missionList');
-  const missionSearchEl = document.getElementById('missionSearch');
-
+  const currentMissionNameEls = [
+    document.getElementById('currentMissionName'),
+    document.getElementById('currentMissionName2'),
+    document.getElementById('currentMissionName3')
+  ];
   const chatMessagesEl = document.getElementById('chatMessages');
   const commsLogEl = document.getElementById('commsLog');
   const fileListEl = document.getElementById('fileList');
 
-  function showMissionList() {
-    missionListContainer.classList.add('active');
-    missionInfoContainer.classList.remove('active');
-    currentMission = null;
+  function updateMissionDisplays() {
+    const name = currentMission ? currentMission.name : 'None';
+    currentMissionNameEls.forEach(el => el.textContent = name);
   }
 
-  function showMissionInfo() {
-    missionListContainer.classList.remove('active');
-    missionInfoContainer.classList.add('active');
-    missionTitle.textContent = `${currentMission.name} (${currentMission.number})`;
-    renderChat();
-    renderComms();
-    renderFiles();
-  }
-
-  function renderMissionList() {
-    const filter = missionSearchEl.value.toLowerCase();
+  function refreshMissionList() {
     missionListEl.innerHTML = '';
-    missions
-      .filter(m => `${m.name} ${m.number}`.toLowerCase().includes(filter))
-      .forEach((m, index) => {
-        const wrapper = document.createElement('div');
-
-        const label = document.createElement('span');
-        label.textContent = `${m.name} (${m.number})`;
-
-        const viewBtn = document.createElement('button');
-        viewBtn.textContent = 'View';
-        viewBtn.onclick = () => {
-          currentMission = m;
-          showMissionInfo();
-        };
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.classList.add('deleteBtn');
-        deleteBtn.onclick = () => {
-          const confirmText = prompt(`Type DELETE to confirm deleting "${m.name} (${m.number})"`);
-          if (confirmText === 'DELETE') {
-            missions.splice(index, 1);
-            renderMissionList();
-            alert('Mission deleted.');
-          } else {
-            alert('Mission not deleted. You must type DELETE exactly.');
-          }
-        };
-
-        wrapper.appendChild(label);
-        wrapper.appendChild(viewBtn);
-        wrapper.appendChild(deleteBtn);
-        missionListEl.appendChild(wrapper);
-      });
-
-    if (missionListEl.innerHTML === '') {
-      missionListEl.textContent = 'No missions found';
-    }
+    missions.forEach((m, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = m.name;
+      btn.onclick = () => {
+        currentMission = m;
+        updateMissionDisplays();
+        renderChat();
+        renderComms();
+        renderFiles();
+      };
+      missionListEl.appendChild(btn);
+    });
   }
 
   function renderChat() {
-    if (!currentMission) return;
+    if (!currentMission) {
+      chatMessagesEl.textContent = 'Select a mission';
+      return;
+    }
     chatMessagesEl.innerHTML = '';
     currentMission.chat.forEach(msg => {
       const div = document.createElement('div');
@@ -212,17 +164,11 @@
     });
   }
 
-  document.getElementById('sendChatBtn').onclick = () => {
-    const input = document.getElementById('chatInput');
-    const msg = input.value.trim();
-    if (!msg || !currentMission) return;
-    currentMission.chat.push(msg);
-    input.value = '';
-    renderChat();
-  };
-
   function renderComms() {
-    if (!currentMission) return;
+    if (!currentMission) {
+      commsLogEl.textContent = 'Select a mission';
+      return;
+    }
     commsLogEl.innerHTML = '';
     currentMission.comms.forEach(log => {
       const div = document.createElement('div');
@@ -231,17 +177,11 @@
     });
   }
 
-  document.getElementById('logCommsBtn').onclick = () => {
-    const input = document.getElementById('commsInput');
-    const log = input.value.trim();
-    if (!log || !currentMission) return;
-    currentMission.comms.push(log);
-    input.value = '';
-    renderComms();
-  };
-
   function renderFiles() {
-    if (!currentMission) return;
+    if (!currentMission) {
+      fileListEl.innerHTML = '<li>Select a mission</li>';
+      return;
+    }
     fileListEl.innerHTML = '';
     currentMission.files.forEach(f => {
       const li = document.createElement('li');
@@ -250,40 +190,55 @@
     });
   }
 
+  document.getElementById('createMissionBtn').onclick = () => {
+    const input = document.getElementById('newMissionName');
+    const name = input.value.trim();
+    if (!name) {
+      alert('Please enter a mission name');
+      return;
+    }
+    const newMission = { name, chat: [], comms: [], files: [] };
+    missions.push(newMission);
+    currentMission = newMission;
+    updateMissionDisplays();
+    refreshMissionList();
+    input.value = '';
+    renderChat();
+    renderComms();
+    renderFiles();
+  };
+
+  document.getElementById('sendChatBtn').onclick = () => {
+    const input = document.getElementById('chatInput');
+    if (!currentMission) return alert('Select a mission first');
+    const msg = input.value.trim();
+    if (!msg) return;
+    currentMission.chat.push(msg);
+    input.value = '';
+    renderChat();
+  };
+
+  document.getElementById('logCommsBtn').onclick = () => {
+    const input = document.getElementById('commsInput');
+    if (!currentMission) return alert('Select a mission first');
+    const log = input.value.trim();
+    if (!log) return;
+    currentMission.comms.push(log);
+    input.value = '';
+    renderComms();
+  };
+
   document.getElementById('uploadFileBtn').onclick = () => {
+    if (!currentMission) return alert('Select a mission first');
     const fileInput = document.getElementById('fileUpload');
-    if (!fileInput.files.length || !currentMission) return;
+    if (!fileInput.files.length) return alert('Select a file to upload');
     currentMission.files.push({ name: fileInput.files[0].name });
     fileInput.value = '';
     renderFiles();
   };
 
-  document.querySelectorAll('.tabBtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tabContent').forEach(tab => tab.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.tab).classList.add('active');
-    });
-  });
-
-  document.getElementById('createMissionBtn').onclick = () => {
-    const name = prompt('Mission Name:');
-    if (!name) return;
-    const number = prompt('Mission Number:');
-    if (!number) return;
-    const newMission = { name, number, chat: [], comms: [], files: [] };
-    missions.push(newMission);
-    renderMissionList();
-  };
-
-  missionSearchEl.oninput = renderMissionList;
-
-  document.getElementById('backBtn').onclick = showMissionList;
-
-  showMissionList();
-  renderMissionList();
+  refreshMissionList();
+  updateMissionDisplays();
 </script>
-
 </body>
 </html>
