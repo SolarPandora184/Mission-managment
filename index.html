@@ -10,21 +10,55 @@
   <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
+      background-color: #f2f2f2;
     }
-    header, nav, main {
+    header {
+      background-color: #003366;
+      color: white;
       padding: 1rem;
+    }
+    header h1 {
+      margin: 0;
+    }
+    #userSection {
+      margin-top: 1rem;
+    }
+    #userSection input {
+      padding: 0.4rem;
+      margin-right: 0.5rem;
+    }
+    #userSection button {
+      padding: 0.4rem 0.8rem;
+    }
+    nav {
+      background-color: #0055a5;
+      padding: 0.5rem 1rem;
+    }
+    nav button {
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 0.4rem 1rem;
+      margin-right: 0.5rem;
+      cursor: pointer;
+    }
+    nav button:hover {
+      background-color: #ddd;
+    }
+    main {
+      padding: 1rem;
+      background-color: white;
+      margin: 1rem;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .tab {
       display: none;
     }
     .tab.active {
       display: block;
-    }
-    nav button {
-      margin-right: 0.5rem;
     }
     #appContent {
       display: none;
@@ -33,6 +67,19 @@
       display: none;
       padding: 2rem;
       text-align: center;
+    }
+    input[type="text"], input[type="file"] {
+      padding: 0.4rem;
+      margin-top: 0.5rem;
+      width: 100%;
+      max-width: 400px;
+    }
+    button {
+      margin-top: 0.5rem;
+    }
+    h2 {
+      border-bottom: 2px solid #003366;
+      padding-bottom: 0.3rem;
     }
   </style>
 </head>
@@ -71,7 +118,7 @@
       <section id="chat" class="tab">
         <h2>Chat</h2>
         <p>Current mission: <span id="currentMissionName"></span></p>
-        <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc;"></div>
+        <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc; padding: 0.5rem;"></div>
         <input type="text" id="chatInput" placeholder="Type message..." />
         <button onclick="sendMessage()">Send</button>
       </section>
@@ -79,7 +126,7 @@
       <section id="comms" class="tab">
         <h2>Comms Log</h2>
         <p>Current mission: <span id="currentMissionName2"></span></p>
-        <div id="commsLog"></div>
+        <div id="commsLog" style="margin-bottom: 0.5rem;"></div>
         <input type="text" id="commsInput" placeholder="Log entry" />
         <button onclick="logComms()">Log</button>
       </section>
@@ -130,19 +177,19 @@
 
     // Auth
     window.login = async () => {
-  const hardcodedEmail = "admin@example.com";
-  const hardcodedPassword = "letmein123";
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  if (email !== hardcodedEmail || password !== hardcodedPassword) {
-    alert("Invalid email or password.");
-    return;
-  }
-  await signInWithEmailAndPassword(auth, email, password).catch(err => {
-    console.error("Firebase auth error:", err);
-    alert("Authentication failed.");
-  });
-};
+      const hardcodedEmail = "admin@example.com";
+      const hardcodedPassword = "letmein123";
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      if (email !== hardcodedEmail || password !== hardcodedPassword) {
+        alert("Invalid email or password.");
+        return;
+      }
+      await signInWithEmailAndPassword(auth, email, password).catch(err => {
+        console.error("Firebase auth error:", err);
+        alert("Authentication failed.");
+      });
+    };
 
     window.logout = async () => {
       await signOut(auth);
