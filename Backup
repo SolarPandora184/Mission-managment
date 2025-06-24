@@ -1,143 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mission Management</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 1rem; position: relative; }
-  section { margin-bottom: 2rem; }
-  h2 { border-bottom: 1px solid #ccc; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mission Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 1rem; }
+    h2 { border-bottom: 1px solid #ccc; }
+    section { margin-bottom: 2rem; }
+    button { cursor: pointer; }
 
-  /* Mission section styles */
-  #missions {
-    position: relative;
-  }
+    #missionListContainer, #missionInfoContainer {
+      display: none;
+    }
 
-  #missionSearch {
-    margin-bottom: 0.5rem;
-    width: 100%;
-    padding: 0.4rem 0.6rem;
-    font-size: 1rem;
-    box-sizing: border-box;
-  }
+    #missionListContainer.active,
+    #missionInfoContainer.active {
+      display: block;
+    }
 
-  #missionList {
-    border: 1px solid #ccc;
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 0.5rem;
-  }
-  #missionList button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    margin: 0.25rem 0;
-    padding: 0.5rem;
-    border: none;
-    background: #f0f0f0;
-    cursor: pointer;
-    font-size: 1rem;
-  }
-  #missionList button:hover {
-    background: #ddd;
-  }
+    #missionList {
+      border: 1px solid #ccc;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
 
-  /* Create mission button top-right */
-  #createMissionBtn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    cursor: pointer;
-  }
+    #missionList button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      margin: 0.25rem 0;
+      padding: 0.5rem;
+      background: #f0f0f0;
+      border: none;
+      font-size: 1rem;
+    }
 
-  /* Modal overlay and box */
-  #modalOverlay {
-    display: none; /* Hidden by default */
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
+    #missionList button:hover {
+      background: #ddd;
+    }
 
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  #modalBox {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    width: 320px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  }
-  #modalBox h3 {
-    margin-top: 0;
-  }
-  #modalBox input[type="text"] {
-    width: 100%;
-    padding: 0.4rem 0.6rem;
-    font-size: 1rem;
-    margin: 0.5rem 0 1rem 0;
-    box-sizing: border-box;
-  }
-  #modalBox button {
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    margin-right: 0.5rem;
-    cursor: pointer;
-  }
+    #createMissionBtn {
+      float: right;
+      margin-bottom: 1rem;
+    }
 
-</style>
+    #missionTabs button {
+      padding: 0.5rem 1rem;
+      margin-right: 0.5rem;
+      border: none;
+      background: #eee;
+      font-weight: bold;
+    }
+
+    #missionTabs button.active {
+      background: #007BFF;
+      color: white;
+    }
+
+    .tabContent {
+      display: none;
+    }
+
+    .tabContent.active {
+      display: block;
+    }
+
+    #backBtn {
+      margin-bottom: 1rem;
+      background: #888;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Mission Management (Rough)</h1>
+<h1>Mission Management</h1>
 
-<section id="missions">
+<!-- Mission List Page -->
+<div id="missionListContainer" class="active">
+  <button id="createMissionBtn">Create Mission</button>
   <h2>Missions</h2>
   <input type="text" id="missionSearch" placeholder="Search missions..." />
   <div id="missionList"></div>
-  <button id="createMissionBtn">Create Mission</button>
-</section>
+</div>
 
-<section id="chat">
-  <h2>Chat</h2>
-  <p>Mission: <span id="currentMissionName">None</span></p>
-  <div id="chatMessages"></div>
-  <input type="text" id="chatInput" placeholder="Type a message" />
-  <button id="sendChatBtn">Send</button>
-</section>
+<!-- Mission Info Page -->
+<div id="missionInfoContainer">
+  <button id="backBtn">← Back to Missions</button>
+  <h2 id="missionTitle"></h2>
 
-<section id="comms">
-  <h2>Comms Log</h2>
-  <p>Mission: <span id="currentMissionName2">None</span></p>
-  <div id="commsLog"></div>
-  <input type="text" id="commsInput" placeholder="Log entry" />
-  <button id="logCommsBtn">Log</button>
-</section>
+  <div id="missionTabs">
+    <button data-tab="chat" class="tabBtn active">Chat</button>
+    <button data-tab="comms" class="tabBtn">Comms Log</button>
+    <button data-tab="files" class="tabBtn">Files</button>
+  </div>
 
-<section id="files">
-  <h2>Files</h2>
-  <p>Mission: <span id="currentMissionName3">None</span></p>
-  <input type="file" id="fileUpload" />
-  <button id="uploadFileBtn">Upload</button>
-  <ul id="fileList"></ul>
-</section>
+  <div id="chat" class="tabContent active">
+    <h3>Chat</h3>
+    <div id="chatMessages" style="border:1px solid #ccc; height:150px; overflow-y:auto; padding:0.5rem;"></div>
+    <input type="text" id="chatInput" placeholder="Type a message" />
+    <button id="sendChatBtn">Send</button>
+  </div>
 
-<!-- Modal for creating mission -->
-<div id="modalOverlay">
-  <div id="modalBox">
-    <h3>Create New Mission</h3>
-    <label for="modalMissionName">Mission Name:</label>
-    <input type="text" id="modalMissionName" placeholder="Mission name" />
-    <label for="modalMissionNumber">Mission Number:</label>
-    <input type="text" id="modalMissionNumber" placeholder="Mission number" />
-    <div>
-      <button id="modalCreateBtn">Create</button>
-      <button id="modalCancelBtn">Cancel</button>
-    </div>
+  <div id="comms" class="tabContent">
+    <h3>Comms Log</h3>
+    <div id="commsLog" style="border:1px solid #ccc; height:150px; overflow-y:auto; padding:0.5rem;"></div>
+    <input type="text" id="commsInput" placeholder="Log entry" />
+    <button id="logCommsBtn">Log</button>
+  </div>
+
+  <div id="files" class="tabContent">
+    <h3>Files</h3>
+    <input type="file" id="fileUpload" />
+    <button id="uploadFileBtn">Upload</button>
+    <ul id="fileList"></ul>
   </div>
 </div>
 
@@ -145,63 +125,50 @@
   const missions = [];
   let currentMission = null;
 
+  const missionListContainer = document.getElementById('missionListContainer');
+  const missionInfoContainer = document.getElementById('missionInfoContainer');
+  const missionTitle = document.getElementById('missionTitle');
   const missionListEl = document.getElementById('missionList');
   const missionSearchEl = document.getElementById('missionSearch');
-  const currentMissionNameEls = [
-    document.getElementById('currentMissionName'),
-    document.getElementById('currentMissionName2'),
-    document.getElementById('currentMissionName3')
-  ];
+
   const chatMessagesEl = document.getElementById('chatMessages');
   const commsLogEl = document.getElementById('commsLog');
   const fileListEl = document.getElementById('fileList');
 
-  // Modal Elements
-  const modalOverlay = document.getElementById('modalOverlay');
-  const modalMissionNameInput = document.getElementById('modalMissionName');
-  const modalMissionNumberInput = document.getElementById('modalMissionNumber');
-  const modalCreateBtn = document.getElementById('modalCreateBtn');
-  const modalCancelBtn = document.getElementById('modalCancelBtn');
-  const createMissionBtn = document.getElementById('createMissionBtn');
-
-  function formatMissionDisplay(mission) {
-    return `${mission.name} (${mission.number})`;
+  function showMissionList() {
+    missionListContainer.classList.add('active');
+    missionInfoContainer.classList.remove('active');
+    currentMission = null;
   }
 
-  function updateMissionDisplays() {
-    const name = currentMission ? formatMissionDisplay(currentMission) : 'None';
-    currentMissionNameEls.forEach(el => el.textContent = name);
+  function showMissionInfo() {
+    missionListContainer.classList.remove('active');
+    missionInfoContainer.classList.add('active');
+    missionTitle.textContent = `${currentMission.name} (${currentMission.number})`;
+    renderChat();
+    renderComms();
+    renderFiles();
   }
 
-  function refreshMissionList() {
-    const filter = missionSearchEl.value.trim().toLowerCase();
+  function renderMissionList() {
+    const filter = missionSearchEl.value.toLowerCase();
     missionListEl.innerHTML = '';
     missions
-      .filter(m => formatMissionDisplay(m).toLowerCase().includes(filter))
+      .filter(m => `${m.name} ${m.number}`.toLowerCase().includes(filter))
       .forEach(m => {
         const btn = document.createElement('button');
-        btn.textContent = formatMissionDisplay(m);
+        btn.textContent = `${m.name} (${m.number})`;
         btn.onclick = () => {
           currentMission = m;
-          updateMissionDisplays();
-          renderChat();
-          renderComms();
-          renderFiles();
-          closeModal();
+          showMissionInfo();
         };
         missionListEl.appendChild(btn);
       });
-
-    if (missionListEl.innerHTML === '') {
-      missionListEl.textContent = 'No missions found';
-    }
   }
 
+  // Chat
   function renderChat() {
-    if (!currentMission) {
-      chatMessagesEl.textContent = 'Select a mission';
-      return;
-    }
+    if (!currentMission) return;
     chatMessagesEl.innerHTML = '';
     currentMission.chat.forEach(msg => {
       const div = document.createElement('div');
@@ -210,11 +177,18 @@
     });
   }
 
+  document.getElementById('sendChatBtn').onclick = () => {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg || !currentMission) return;
+    currentMission.chat.push(msg);
+    input.value = '';
+    renderChat();
+  };
+
+  // Comms
   function renderComms() {
-    if (!currentMission) {
-      commsLogEl.textContent = 'Select a mission';
-      return;
-    }
+    if (!currentMission) return;
     commsLogEl.innerHTML = '';
     currentMission.comms.forEach(log => {
       const div = document.createElement('div');
@@ -223,11 +197,18 @@
     });
   }
 
+  document.getElementById('logCommsBtn').onclick = () => {
+    const input = document.getElementById('commsInput');
+    const log = input.value.trim();
+    if (!log || !currentMission) return;
+    currentMission.comms.push(log);
+    input.value = '';
+    renderComms();
+  };
+
+  // Files
   function renderFiles() {
-    if (!currentMission) {
-      fileListEl.innerHTML = '<li>Select a mission</li>';
-      return;
-    }
+    if (!currentMission) return;
     fileListEl.innerHTML = '';
     currentMission.files.forEach(f => {
       const li = document.createElement('li');
@@ -236,95 +217,44 @@
     });
   }
 
-  // Modal open/close
-  function openModal() {
-    modalOverlay.style.display = 'flex';
-    modalMissionNameInput.value = '';
-    modalMissionNumberInput.value = '';
-    modalMissionNameInput.focus();
-  }
-  function closeModal() {
-    modalOverlay.style.display = 'none';
-  }
-
-  // Create mission via modal
-  function createMissionFromModal() {
-    const name = modalMissionNameInput.value.trim();
-    const number = modalMissionNumberInput.value.trim();
-
-    if (!name) {
-      alert('Please enter a mission name');
-      modalMissionNameInput.focus();
-      return;
-    }
-    if (!number) {
-      alert('Please enter a mission number');
-      modalMissionNumberInput.focus();
-      return;
-    }
-    // Check if mission already exists (by name and number)
-    if (missions.some(m => m.name.toLowerCase() === name.toLowerCase() && m.number === number)) {
-      alert('Mission with this name and number already exists');
-      modalMissionNameInput.focus();
-      return;
-    }
-    const newMission = { name, number, chat: [], comms: [], files: [] };
-    missions.push(newMission);
-    currentMission = newMission;
-    updateMissionDisplays();
-    refreshMissionList();
-    renderChat();
-    renderComms();
-    renderFiles();
-    closeModal();
-  }
-
-  createMissionBtn.onclick = openModal;
-  modalCancelBtn.onclick = closeModal;
-  modalCreateBtn.onclick = createMissionFromModal;
-
-  // Also allow pressing Enter key in either modal input to submit form
-  [modalMissionNameInput, modalMissionNumberInput].forEach(input => {
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        createMissionFromModal();
-      }
-    });
-  });
-
-  document.getElementById('sendChatBtn').onclick = () => {
-    const input = document.getElementById('chatInput');
-    if (!currentMission) return alert('Select a mission first');
-    const msg = input.value.trim();
-    if (!msg) return;
-    currentMission.chat.push(msg);
-    input.value = '';
-    renderChat();
-  };
-
-  document.getElementById('logCommsBtn').onclick = () => {
-    const input = document.getElementById('commsInput');
-    if (!currentMission) return alert('Select a mission first');
-    const log = input.value.trim();
-    if (!log) return;
-    currentMission.comms.push(log);
-    input.value = '';
-    renderComms();
-  };
-
   document.getElementById('uploadFileBtn').onclick = () => {
-    if (!currentMission) return alert('Select a mission first');
     const fileInput = document.getElementById('fileUpload');
-    if (!fileInput.files.length) return alert('Select a file to upload');
+    if (!fileInput.files.length || !currentMission) return;
     currentMission.files.push({ name: fileInput.files[0].name });
     fileInput.value = '';
     renderFiles();
   };
 
-  missionSearchEl.oninput = refreshMissionList;
+  // Tab switching
+  document.querySelectorAll('.tabBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabContent').forEach(tab => tab.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
 
-  refreshMissionList();
-  updateMissionDisplays();
+  // Mission create
+  document.getElementById('createMissionBtn').onclick = () => {
+    const name = prompt('Mission Name:');
+    if (!name) return;
+    const number = prompt('Mission Number:');
+    if (!number) return;
+    const newMission = { name, number, chat: [], comms: [], files: [] };
+    missions.push(newMission);
+    renderMissionList();
+  };
+
+  // Search
+  missionSearchEl.oninput = renderMissionList;
+
+  // Back
+  document.getElementById('backBtn').onclick = showMissionList;
+
+  // Init
+  showMissionList();
+  renderMissionList();
 </script>
 
 </body>
