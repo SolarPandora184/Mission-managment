@@ -1,314 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mission Management</title>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background-color: #f2f2f2;
-    }
-    header {
-      background-color: #003366;
-      color: white;
-      padding: 1rem;
-    }
-    header h1 {
-      margin: 0;
-    }
-    nav {
-      background-color: #0055a5;
-      padding: 0.5rem 1rem;
-    }
-    nav button {
-      background-color: white;
-      border: 1px solid #ccc;
-      padding: 0.4rem 1rem;
-      margin-right: 0.5rem;
-      cursor: pointer;
-    }
-    nav button:hover {
-      background-color: #ddd;
-    }
-    main {
-      padding: 1rem;
-      background-color: white;
-      margin: 1rem;
-      border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .tab {
-      display: none;
-    }
-    .tab.active {
-      display: block;
-    }
-    input[type="text"], input[type="file"] {
-      padding: 0.4rem;
-      margin-top: 0.5rem;
-      width: 100%;
-      max-width: 400px;
-    }
-    button {
-      margin-top: 0.5rem;
-    }
-    h2 {
-      border-bottom: 2px solid #003366;
-      padding-bottom: 0.3rem;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mission Management</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 1rem; }
+  section { margin-bottom: 2rem; }
+  h2 { border-bottom: 1px solid #ccc; }
+  input, button, textarea { margin-top: 0.5rem; display: block; }
+  #chatMessages, #commsLog, #fileList { border: 1px solid #ccc; height: 150px; overflow-y: auto; padding: 0.5rem; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Mission Management</h1>
-  </header>
 
-  <nav>
-    <button onclick="showTab('missions')">Missions</button>
-    <button onclick="showTab('chat')">Chat</button>
-    <button onclick="showTab('comms')">Comms Log</button>
-    <button onclick="showTab('files')">Files</button>
-    <button onclick="showTab('tracking')">Tracking (WIP)</button>
-  </nav>
+<h1>Mission Management (Rough)</h1>
 
-  <main>
-    <section id="missions" class="tab active">
-      <h2>Mission List</h2>
-      <div id="missionList"></div>
-      <input type="text" id="newMissionName" placeholder="New mission name" />
-      <button id="createMissionBtn">Create Mission</button>
-    </section>
+<section id="missions">
+  <h2>Missions</h2>
+  <div id="missionList"></div>
+  <input type="text" id="newMissionName" placeholder="New mission name" />
+  <button id="createMissionBtn">Create Mission</button>
+</section>
 
-    <section id="chat" class="tab">
-      <h2>Chat</h2>
-      <p>Current mission: <span id="currentMissionName"></span></p>
-      <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc; padding: 0.5rem;"></div>
-      <input type="text" id="chatInput" placeholder="Type message..." />
-      <button onclick="sendMessage()">Send</button>
-    </section>
+<section id="chat">
+  <h2>Chat</h2>
+  <p>Mission: <span id="currentMissionName">None</span></p>
+  <div id="chatMessages"></div>
+  <input type="text" id="chatInput" placeholder="Type a message" />
+  <button id="sendChatBtn">Send</button>
+</section>
 
-    <section id="comms" class="tab">
-      <h2>Comms Log</h2>
-      <p>Current mission: <span id="currentMissionName2"></span></p>
-      <div id="commsLog" style="margin-bottom: 0.5rem;"></div>
-      <input type="text" id="commsInput" placeholder="Log entry" />
-      <button onclick="logComms()">Log</button>
-    </section>
+<section id="comms">
+  <h2>Comms Log</h2>
+  <p>Mission: <span id="currentMissionName2">None</span></p>
+  <div id="commsLog"></div>
+  <input type="text" id="commsInput" placeholder="Log entry" />
+  <button id="logCommsBtn">Log</button>
+</section>
 
-    <section id="files" class="tab">
-      <h2>File Sharing</h2>
-      <p>Current mission: <span id="currentMissionName3"></span></p>
-      <input type="file" id="fileUpload" />
-      <button onclick="uploadFile()">Upload</button>
-      <ul id="fileList"></ul>
-    </section>
+<section id="files">
+  <h2>Files</h2>
+  <p>Mission: <span id="currentMissionName3">None</span></p>
+  <input type="file" id="fileUpload" />
+  <button id="uploadFileBtn">Upload</button>
+  <ul id="fileList"></ul>
+</section>
 
-    <section id="tracking" class="tab">
-      <h2>Aircraft Tracking</h2>
-      <p>Tracking integration placeholder.</p>
-    </section>
-  </main>
+<script>
+  // Simple in-memory data store (no persistence)
+  const missions = [];
+  let currentMission = null;
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+  const missionListEl = document.getElementById('missionList');
+  const currentMissionNameEls = [
+    document.getElementById('currentMissionName'),
+    document.getElementById('currentMissionName2'),
+    document.getElementById('currentMissionName3')
+  ];
+  const chatMessagesEl = document.getElementById('chatMessages');
+  const commsLogEl = document.getElementById('commsLog');
+  const fileListEl = document.getElementById('fileList');
 
-    // TODO: Replace with your Firebase config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+  function updateMissionDisplays() {
+    const name = currentMission ? currentMission.name : 'None';
+    currentMissionNameEls.forEach(el => el.textContent = name);
+  }
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-
-    let currentMissionId = null;
-    let currentMissionName = "";
-
-    function updateMissionDisplays() {
-      document.getElementById("currentMissionName").textContent = currentMissionName || "(none)";
-      document.getElementById("currentMissionName2").textContent = currentMissionName || "(none)";
-      document.getElementById("currentMissionName3").textContent = currentMissionName || "(none)";
-    }
-
-    window.showTab = (id) => {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    };
-
-    async function createMission() {
-      const nameInput = document.getElementById("newMissionName");
-      const name = nameInput.value.trim();
-      if (!name) {
-        alert("Please enter a mission name.");
-        return;
-      }
-      console.log("Creating mission:", name);
-      try {
-        const docRef = await addDoc(collection(db, "missions"), { name });
-        currentMissionId = docRef.id;
-        currentMissionName = name;
+  function refreshMissionList() {
+    missionListEl.innerHTML = '';
+    missions.forEach((m, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = m.name;
+      btn.onclick = () => {
+        currentMission = m;
         updateMissionDisplays();
-        await loadMissions();
-        // Clear input
-        nameInput.value = "";
-        // Load mission related data
-        loadMessages();
-        loadComms();
-        loadFiles();
-      } catch (e) {
-        console.error("Error adding mission: ", e);
-        alert("Failed to create mission.");
-      }
+        renderChat();
+        renderComms();
+        renderFiles();
+      };
+      missionListEl.appendChild(btn);
+    });
+  }
+
+  function renderChat() {
+    if (!currentMission) {
+      chatMessagesEl.textContent = 'Select a mission';
+      return;
     }
+    chatMessagesEl.innerHTML = '';
+    currentMission.chat.forEach(msg => {
+      const div = document.createElement('div');
+      div.textContent = msg;
+      chatMessagesEl.appendChild(div);
+    });
+  }
 
-    async function loadMissions() {
-      try {
-        const missionsSnapshot = await getDocs(collection(db, "missions"));
-        const list = document.getElementById("missionList");
-        list.innerHTML = "";
-        missionsSnapshot.forEach(doc => {
-          const btn = document.createElement("button");
-          btn.textContent = doc.data().name;
-          btn.onclick = () => {
-            currentMissionId = doc.id;
-            currentMissionName = doc.data().name;
-            updateMissionDisplays();
-            loadMessages();
-            loadComms();
-            loadFiles();
-          };
-          list.appendChild(btn);
-        });
-      } catch(e) {
-        console.error("Error loading missions: ", e);
-      }
+  function renderComms() {
+    if (!currentMission) {
+      commsLogEl.textContent = 'Select a mission';
+      return;
     }
+    commsLogEl.innerHTML = '';
+    currentMission.comms.forEach(log => {
+      const div = document.createElement('div');
+      div.textContent = log;
+      commsLogEl.appendChild(div);
+    });
+  }
 
-    // Load missions on start
-    loadMissions();
-
-    // === Chat ===
-    function loadMessages() {
-      if (!currentMissionId) {
-        document.getElementById("chatMessages").innerHTML = "<i>No mission selected</i>";
-        return;
-      }
-      const chatRef = collection(db, "missions", currentMissionId, "chat");
-      onSnapshot(chatRef, snapshot => {
-        const box = document.getElementById("chatMessages");
-        box.innerHTML = "";
-        snapshot.forEach(doc => {
-          const div = document.createElement("div");
-          div.textContent = doc.data().text;
-          box.appendChild(div);
-        });
-      });
+  function renderFiles() {
+    if (!currentMission) {
+      fileListEl.innerHTML = '<li>Select a mission</li>';
+      return;
     }
+    fileListEl.innerHTML = '';
+    currentMission.files.forEach(f => {
+      const li = document.createElement('li');
+      li.textContent = f.name;
+      fileListEl.appendChild(li);
+    });
+  }
 
-    window.sendMessage = async () => {
-      const input = document.getElementById("chatInput");
-      const text = input.value.trim();
-      if (!text) return alert("Enter a chat message.");
-      if (!currentMissionId) return alert("Select a mission first.");
-      try {
-        await addDoc(collection(db, "missions", currentMissionId, "chat"), { text });
-        input.value = "";
-      } catch(e) {
-        console.error("Error sending message:", e);
-        alert("Failed to send message.");
-      }
-    };
-
-    // === Comms ===
-    function loadComms() {
-      if (!currentMissionId) {
-        document.getElementById("commsLog").innerHTML = "<i>No mission selected</i>";
-        return;
-      }
-      const commsRef = collection(db, "missions", currentMissionId, "comms");
-      onSnapshot(commsRef, snapshot => {
-        const box = document.getElementById("commsLog");
-        box.innerHTML = "";
-        snapshot.forEach(doc => {
-          const div = document.createElement("div");
-          div.textContent = doc.data().entry;
-          box.appendChild(div);
-        });
-      });
+  document.getElementById('createMissionBtn').onclick = () => {
+    const input = document.getElementById('newMissionName');
+    const name = input.value.trim();
+    if (!name) {
+      alert('Please enter a mission name');
+      return;
     }
+    const newMission = { name, chat: [], comms: [], files: [] };
+    missions.push(newMission);
+    currentMission = newMission;
+    updateMissionDisplays();
+    refreshMissionList();
+    input.value = '';
+    renderChat();
+    renderComms();
+    renderFiles();
+  };
 
-    window.logComms = async () => {
-      const input = document.getElementById("commsInput");
-      const entry = input.value.trim();
-      if (!entry) return alert("Enter a comms log entry.");
-      if (!currentMissionId) return alert("Select a mission first.");
-      try {
-        await addDoc(collection(db, "missions", currentMissionId, "comms"), { entry });
-        input.value = "";
-      } catch(e) {
-        console.error("Error logging comms:", e);
-        alert("Failed to log comms.");
-      }
-    };
+  document.getElementById('sendChatBtn').onclick = () => {
+    const input = document.getElementById('chatInput');
+    if (!currentMission) return alert('Select a mission first');
+    const msg = input.value.trim();
+    if (!msg) return;
+    currentMission.chat.push(msg);
+    input.value = '';
+    renderChat();
+  };
 
-    // === Files ===
-    async function loadFiles() {
-      if (!currentMissionId) {
-        document.getElementById("fileList").innerHTML = "<i>No mission selected</i>";
-        return;
-      }
-      const folderRef = ref(storage, currentMissionId);
-      const fileList = document.getElementById("fileList");
-      fileList.innerHTML = "";
-      try {
-        const res = await listAll(folderRef);
-        for (let itemRef of res.items) {
-          const url = await getDownloadURL(itemRef);
-          const li = document.createElement("li");
-          const a = document.createElement("a");
-          a.href = url;
-          a.textContent = itemRef.name;
-          a.target = "_blank";
-          li.appendChild(a);
-          fileList.appendChild(li);
-        }
-      } catch(e) {
-        console.error("Error loading files:", e);
-        fileList.innerHTML = "<i>Error loading files</i>";
-      }
-    }
+  document.getElementById('logCommsBtn').onclick = () => {
+    const input = document.getElementById('commsInput');
+    if (!currentMission) return alert('Select a mission first');
+    const log = input.value.trim();
+    if (!log) return;
+    currentMission.comms.push(log);
+    input.value = '';
+    renderComms();
+  };
 
-    window.uploadFile = async () => {
-      const fileInput = document.getElementById("fileUpload");
-      const file = fileInput.files[0];
-      if (!file) return alert("Select a file to upload.");
-      if (!currentMissionId) return alert("Select a mission first.");
-      const fileRef = ref(storage, `${currentMissionId}/${file.name}`);
-      try {
-        await uploadBytes(fileRef, file);
-        fileInput.value = "";
-        loadFiles();
-      } catch(e) {
-        console.error("Error uploading file:", e);
-        alert("Failed to upload file.");
-      }
-    };
+  document.getElementById('uploadFileBtn').onclick = () => {
+    if (!currentMission) return alert('Select a mission first');
+    const fileInput = document.getElementById('fileUpload');
+    if (!fileInput.files.length) return alert('Select a file to upload');
+    // Just store file name in memory
+    currentMission.files.push({ name: fileInput.files[0].name });
+    fileInput.value = '';
+    renderFiles();
+  };
 
-    // Attach createMission to window so the button onclick works
-    window.createMission = createMission;
+  refreshMissionList();
+  updateMissionDisplays();
+</script>
 
-  </script>
 </body>
 </html>
