@@ -9,7 +9,6 @@
     import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
-    // ✅ Correct Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBQQsKT0rPK0QXOMu2rpFi-Z7Dt5cW8cH4",
       authDomain: "mission-managment.firebaseapp.com",
@@ -33,14 +32,20 @@
     }
 
     window.createMission = async () => {
-      const name = document.getElementById("newMissionName").value.trim();
-      if (!name) return alert("Enter a mission name.");
+      const input = document.getElementById("newMissionName");
+      const name = input.value.trim();
+      if (!name) {
+        alert("Please enter a mission name");
+        return;
+      }
+
       const docRef = await addDoc(collection(db, "missions"), { name });
       currentMissionId = docRef.id;
       currentMissionName = name;
+      input.value = "";
+
       updateMissionDisplays();
-      document.getElementById("newMissionName").value = "";
-      loadMissions();
+      await loadMissions();
       loadChat();
       loadComms();
       loadFiles();
