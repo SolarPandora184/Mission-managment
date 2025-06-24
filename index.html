@@ -49,7 +49,11 @@
     To request an account, please email <strong>Kendrick Uhles</strong> and CC <strong>Laramie Uhles</strong>.<br />
     Include your desired <strong>username</strong> and <strong>password</strong>.
   </p>
-  <p>Email Kendrick: <a href="mailto:kendrickuhles@example.com?cc=laramieuhles@example.com&subject=Mission%20System%20Account%20Request">kendrickuhles@example.com</a></p>
+  <p>Email Kendrick: 
+    <a href="mailto:kendrick.uhles@cawgcap.org?cc=laramie.uhles@cawgcap.org&subject=Mission%20System%20Account%20Request">
+      kendrick.uhles@cawgcap.org
+    </a>
+  </p>
   <button id="backToLoginBtn">&larr; Back to Login</button>
 </div>
 
@@ -90,12 +94,14 @@
 </div>
 
 <script>
+  // Simple in-code login users
   const USERS = {
     "CommanderK": "SecurePass123",
     "LaramieU": "RadioOps456",
     "TestUser": "TestPass789"
   };
 
+  // Login button event
   document.getElementById('loginBtn').onclick = () => {
     const user = document.getElementById('usernameInput').value.trim();
     const pass = document.getElementById('passwordInput').value;
@@ -103,21 +109,26 @@
     if (USERS[user] === pass) {
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('loginError').textContent = '';
     } else {
       document.getElementById('loginError').textContent = "Incorrect username or password.";
     }
   };
 
+  // Show create account info
   document.getElementById('createAccountBtn').onclick = () => {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('createAccountSection').style.display = 'block';
   };
 
+  // Back to login from create account
   document.getElementById('backToLoginBtn').onclick = () => {
     document.getElementById('createAccountSection').style.display = 'none';
     document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('loginError').textContent = '';
   };
 
+  // Mission data and state
   const missions = [];
   let currentMission = null;
 
@@ -131,11 +142,13 @@
   const commsLogEl = document.getElementById('commsLog');
   const fileListEl = document.getElementById('fileList');
 
+  // Update mission name display on all sections
   function updateMissionDisplays() {
     const name = currentMission ? currentMission.name : 'None';
     currentMissionNameEls.forEach(el => el.textContent = name);
   }
 
+  // Refresh mission list with buttons
   function refreshMissionList() {
     missionListEl.innerHTML = '';
     missions.forEach((m, i) => {
@@ -152,6 +165,7 @@
     });
   }
 
+  // Render chat messages
   function renderChat() {
     if (!currentMission) {
       chatMessagesEl.textContent = 'Select a mission';
@@ -165,6 +179,7 @@
     });
   }
 
+  // Render comms log entries
   function renderComms() {
     if (!currentMission) {
       commsLogEl.textContent = 'Select a mission';
@@ -178,6 +193,7 @@
     });
   }
 
+  // Render uploaded files list
   function renderFiles() {
     if (!currentMission) {
       fileListEl.innerHTML = '<li>Select a mission</li>';
@@ -191,6 +207,7 @@
     });
   }
 
+  // Create mission button event
   document.getElementById('createMissionBtn').onclick = () => {
     const input = document.getElementById('newMissionName');
     const name = input.value.trim();
@@ -209,6 +226,7 @@
     renderFiles();
   };
 
+  // Send chat message event
   document.getElementById('sendChatBtn').onclick = () => {
     const input = document.getElementById('chatInput');
     if (!currentMission) return alert('Select a mission first');
@@ -219,6 +237,7 @@
     renderChat();
   };
 
+  // Log comms event
   document.getElementById('logCommsBtn').onclick = () => {
     const input = document.getElementById('commsInput');
     if (!currentMission) return alert('Select a mission first');
@@ -229,6 +248,7 @@
     renderComms();
   };
 
+  // Upload file event
   document.getElementById('uploadFileBtn').onclick = () => {
     if (!currentMission) return alert('Select a mission first');
     const fileInput = document.getElementById('fileUpload');
@@ -238,6 +258,7 @@
     renderFiles();
   };
 
+  // Initialize
   refreshMissionList();
   updateMissionDisplays();
 </script>
