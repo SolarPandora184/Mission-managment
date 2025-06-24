@@ -26,19 +26,23 @@
       padding: 0.5rem;
     }
 
-    #missionList button {
-      display: block;
-      width: 100%;
-      text-align: left;
-      margin: 0.25rem 0;
-      padding: 0.5rem;
-      background: #f0f0f0;
-      border: none;
-      font-size: 1rem;
+    #missionList div {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.25rem;
+      padding: 0.25rem;
+      background: #f9f9f9;
     }
 
-    #missionList button:hover {
-      background: #ddd;
+    #missionList span {
+      flex-grow: 1;
+      margin-right: 1rem;
+    }
+
+    #missionList button {
+      margin-left: 0.3rem;
+      padding: 0.3rem 0.6rem;
     }
 
     #createMissionBtn {
@@ -73,6 +77,11 @@
       color: white;
       padding: 0.5rem 1rem;
       border: none;
+    }
+
+    .deleteBtn {
+      background: #c00;
+      color: white;
     }
   </style>
 </head>
@@ -155,18 +164,44 @@
     missionListEl.innerHTML = '';
     missions
       .filter(m => `${m.name} ${m.number}`.toLowerCase().includes(filter))
-      .forEach(m => {
-        const btn = document.createElement('button');
-        btn.textContent = `${m.name} (${m.number})`;
-        btn.onclick = () => {
+      .forEach((m, index) => {
+        const wrapper = document.createElement('div');
+
+        const label = document.createElement('span');
+        label.textContent = `${m.name} (${m.number})`;
+
+        const viewBtn = document.createElement('button');
+        viewBtn.textContent = 'View';
+        viewBtn.onclick = () => {
           currentMission = m;
           showMissionInfo();
         };
-        missionListEl.appendChild(btn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.classList.add('deleteBtn');
+        deleteBtn.onclick = () => {
+          const confirmText = prompt(`Type DELETE to confirm deleting "${m.name} (${m.number})"`);
+          if (confirmText === 'DELETE') {
+            missions.splice(index, 1);
+            renderMissionList();
+            alert('Mission deleted.');
+          } else {
+            alert('Mission not deleted. You must type DELETE exactly.');
+          }
+        };
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(viewBtn);
+        wrapper.appendChild(deleteBtn);
+        missionListEl.appendChild(wrapper);
       });
+
+    if (missionListEl.innerHTML === '') {
+      missionListEl.textContent = 'No missions found';
+    }
   }
 
-  // Chat
   function renderChat() {
     if (!currentMission) return;
     chatMessagesEl.innerHTML = '';
@@ -186,7 +221,6 @@
     renderChat();
   };
 
-  // Comms
   function renderComms() {
     if (!currentMission) return;
     commsLogEl.innerHTML = '';
@@ -206,7 +240,6 @@
     renderComms();
   };
 
-  // Files
   function renderFiles() {
     if (!currentMission) return;
     fileListEl.innerHTML = '';
@@ -225,7 +258,6 @@
     renderFiles();
   };
 
-  // Tab switching
   document.querySelectorAll('.tabBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
@@ -235,7 +267,6 @@
     });
   });
 
-  // Mission create
   document.getElementById('createMissionBtn').onclick = () => {
     const name = prompt('Mission Name:');
     if (!name) return;
@@ -246,13 +277,10 @@
     renderMissionList();
   };
 
-  // Search
   missionSearchEl.oninput = renderMissionList;
 
-  // Back
   document.getElementById('backBtn').onclick = showMissionList;
 
-  // Init
   showMissionList();
   renderMissionList();
 </script>
