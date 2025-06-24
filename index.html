@@ -57,6 +57,7 @@
 
     <section id="chat" class="tab">
       <h2>Chat</h2>
+      <p>Current mission: <span id="currentMissionName"></span></p>
       <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc;"></div>
       <input type="text" id="chatInput" placeholder="Type message..." />
       <button onclick="sendMessage()">Send</button>
@@ -64,6 +65,7 @@
 
     <section id="comms" class="tab">
       <h2>Comms Log</h2>
+      <p>Current mission: <span id="currentMissionName2"></span></p>
       <div id="commsLog"></div>
       <input type="text" id="commsInput" placeholder="Log entry" />
       <button onclick="logComms()">Log</button>
@@ -71,6 +73,7 @@
 
     <section id="files" class="tab">
       <h2>File Sharing</h2>
+      <p>Current mission: <span id="currentMissionName3"></span></p>
       <input type="file" id="fileUpload" />
       <button onclick="uploadFile()">Upload</button>
       <ul id="fileList"></ul>
@@ -85,7 +88,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -101,6 +104,15 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+
+    let currentMissionId = null;
+    let currentMissionName = "";
+
+    function updateMissionDisplays() {
+      document.getElementById("currentMissionName").textContent = currentMissionName;
+      document.getElementById("currentMissionName2").textContent = currentMissionName;
+      document.getElementById("currentMissionName3").textContent = currentMissionName;
+    }
 
     // Auth
     window.login = async () => {
@@ -136,14 +148,53 @@
       snapshot.forEach(doc => {
         const div = document.createElement("div");
         div.textContent = doc.data().name;
+        div.style.cursor = "pointer";
+        div.onclick = () => {
+          currentMissionId = doc.id;
+          currentMissionName = doc.data().name;
+          updateMissionDisplays();
+          loadMissionData();
+        };
         missionList.appendChild(div);
       });
     });
 
-    // Chat
+    function loadMissionData() {
+      // Chat
+      const chatMessages = document.getElementById("chatMessages");
+      const chatQuery = query(collection(db, "chat"), where("missionId", "==", currentMissionId));
+      onSnapshot(chatQuery, (snapshot) => {
+        chatMessages.innerHTML = "";
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          const p = document.createElement("p");
+          p.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.user}: ${msg.text}`;
+          chatMessages.appendChild(p);
+        });
+      });
+
+      // Comms
+      const commsLog = document.getElementById("commsLog");
+      const commsQuery = query(collection(db, "comms"), where("missionId", "==", currentMissionId));
+      onSnapshot(commsQuery, (snapshot) => {
+        commsLog.innerHTML = "";
+        snapshot.forEach(doc => {
+          const log = doc.data();
+          const p = document.createElement("p");
+          p.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.user}: ${log.entry}`;
+          commsLog.appendChild(p);
+        });
+      });
+
+      // Files
+      updateFiles();
+    }
+
     window.sendMessage = async () => {
       const input = document.getElementById("chatInput");
+      if (!currentMissionId) return alert("Select a mission first.");
       await addDoc(collection(db, "chat"), {
+        missionId: currentMissionId,
         text: input.value,
         timestamp: Date.now(),
         user: auth.currentUser?.email || "anon"
@@ -151,21 +202,11 @@
       input.value = "";
     };
 
-    const chatMessages = document.getElementById("chatMessages");
-    onSnapshot(collection(db, "chat"), (snapshot) => {
-      chatMessages.innerHTML = "";
-      snapshot.forEach(doc => {
-        const msg = doc.data();
-        const p = document.createElement("p");
-        p.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.user}: ${msg.text}`;
-        chatMessages.appendChild(p);
-      });
-    });
-
-    // Comms Log
     window.logComms = async () => {
       const input = document.getElementById("commsInput");
+      if (!currentMissionId) return alert("Select a mission first.");
       await addDoc(collection(db, "comms"), {
+        missionId: currentMissionId,
         entry: input.value,
         timestamp: Date.now(),
         user: auth.currentUser?.email || "anon"
@@ -173,28 +214,18 @@
       input.value = "";
     };
 
-    const commsLog = document.getElementById("commsLog");
-    onSnapshot(collection(db, "comms"), (snapshot) => {
-      commsLog.innerHTML = "";
-      snapshot.forEach(doc => {
-        const log = doc.data();
-        const p = document.createElement("p");
-        p.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.user}: ${log.entry}`;
-        commsLog.appendChild(p);
-      });
-    });
-
-    // File Upload
     window.uploadFile = async () => {
       const file = document.getElementById("fileUpload").files[0];
-      if (!file) return;
-      const fileRef = ref(storage, `uploads/${file.name}`);
+      if (!file || !currentMissionId) return;
+      const fileRef = ref(storage, `missions/${currentMissionId}/${file.name}`);
       await uploadBytes(fileRef, file);
+      updateFiles();
     };
 
     const fileList = document.getElementById("fileList");
     const updateFiles = async () => {
-      const listRef = ref(storage, "uploads");
+      if (!currentMissionId) return;
+      const listRef = ref(storage, `missions/${currentMissionId}`);
       const res = await listAll(listRef);
       fileList.innerHTML = "";
       for (const itemRef of res.items) {
@@ -208,7 +239,6 @@
         fileList.appendChild(li);
       }
     };
-    updateFiles();
   </script>
 </body>
 </html>
