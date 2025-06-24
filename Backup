@@ -69,7 +69,7 @@
     background: white;
     padding: 1.5rem;
     border-radius: 8px;
-    width: 300px;
+    width: 320px;
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
   }
   #modalBox h3 {
@@ -130,7 +130,10 @@
 <div id="modalOverlay">
   <div id="modalBox">
     <h3>Create New Mission</h3>
+    <label for="modalMissionName">Mission Name:</label>
     <input type="text" id="modalMissionName" placeholder="Mission name" />
+    <label for="modalMissionNumber">Mission Number:</label>
+    <input type="text" id="modalMissionNumber" placeholder="Mission number" />
     <div>
       <button id="modalCreateBtn">Create</button>
       <button id="modalCancelBtn">Cancel</button>
@@ -156,12 +159,17 @@
   // Modal Elements
   const modalOverlay = document.getElementById('modalOverlay');
   const modalMissionNameInput = document.getElementById('modalMissionName');
+  const modalMissionNumberInput = document.getElementById('modalMissionNumber');
   const modalCreateBtn = document.getElementById('modalCreateBtn');
   const modalCancelBtn = document.getElementById('modalCancelBtn');
   const createMissionBtn = document.getElementById('createMissionBtn');
 
+  function formatMissionDisplay(mission) {
+    return `${mission.name} (${mission.number})`;
+  }
+
   function updateMissionDisplays() {
-    const name = currentMission ? currentMission.name : 'None';
+    const name = currentMission ? formatMissionDisplay(currentMission) : 'None';
     currentMissionNameEls.forEach(el => el.textContent = name);
   }
 
@@ -169,10 +177,10 @@
     const filter = missionSearchEl.value.trim().toLowerCase();
     missionListEl.innerHTML = '';
     missions
-      .filter(m => m.name.toLowerCase().includes(filter))
+      .filter(m => formatMissionDisplay(m).toLowerCase().includes(filter))
       .forEach(m => {
         const btn = document.createElement('button');
-        btn.textContent = m.name;
+        btn.textContent = formatMissionDisplay(m);
         btn.onclick = () => {
           currentMission = m;
           updateMissionDisplays();
@@ -232,6 +240,7 @@
   function openModal() {
     modalOverlay.style.display = 'flex';
     modalMissionNameInput.value = '';
+    modalMissionNumberInput.value = '';
     modalMissionNameInput.focus();
   }
   function closeModal() {
@@ -241,18 +250,25 @@
   // Create mission via modal
   function createMissionFromModal() {
     const name = modalMissionNameInput.value.trim();
+    const number = modalMissionNumberInput.value.trim();
+
     if (!name) {
       alert('Please enter a mission name');
       modalMissionNameInput.focus();
       return;
     }
-    // Check if mission already exists (optional)
-    if (missions.some(m => m.name.toLowerCase() === name.toLowerCase())) {
-      alert('Mission with this name already exists');
+    if (!number) {
+      alert('Please enter a mission number');
+      modalMissionNumberInput.focus();
+      return;
+    }
+    // Check if mission already exists (by name and number)
+    if (missions.some(m => m.name.toLowerCase() === name.toLowerCase() && m.number === number)) {
+      alert('Mission with this name and number already exists');
       modalMissionNameInput.focus();
       return;
     }
-    const newMission = { name, chat: [], comms: [], files: [] };
+    const newMission = { name, number, chat: [], comms: [], files: [] };
     missions.push(newMission);
     currentMission = newMission;
     updateMissionDisplays();
@@ -267,11 +283,13 @@
   modalCancelBtn.onclick = closeModal;
   modalCreateBtn.onclick = createMissionFromModal;
 
-  // Also allow pressing Enter key in modal input to submit form
-  modalMissionNameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      createMissionFromModal();
-    }
+  // Also allow pressing Enter key in either modal input to submit form
+  [modalMissionNameInput, modalMissionNumberInput].forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        createMissionFromModal();
+      }
+    });
   });
 
   document.getElementById('sendChatBtn').onclick = () => {
