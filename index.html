@@ -147,7 +147,112 @@
       document.getElementById(id).classList.add('active');
     };
 
-    // Rest of your logic unchanged...
+    // === Mission Creation ===
+    async function createMission() {
+      const name = document.getElementById("newMissionName").value.trim();
+      if (!name) return;
+      const docRef = await addDoc(collection(db, "missions"), { name });
+      document.getElementById("newMissionName").value = "";
+      currentMissionId = docRef.id;
+      currentMissionName = name;
+      updateMissionDisplays();
+      loadMessages();
+      loadComms();
+      loadFiles();
+    }
+
+    async function loadMissions() {
+      const missionsSnapshot = await getDocs(collection(db, "missions"));
+      const list = document.getElementById("missionList");
+      list.innerHTML = "";
+      missionsSnapshot.forEach(doc => {
+        const btn = document.createElement("button");
+        btn.textContent = doc.data().name;
+        btn.onclick = () => {
+          currentMissionId = doc.id;
+          currentMissionName = doc.data().name;
+          updateMissionDisplays();
+          loadMessages();
+          loadComms();
+          loadFiles();
+        };
+        list.appendChild(btn);
+      });
+    }
+    loadMissions();
+
+    // === Chat ===
+    function loadMessages() {
+      if (!currentMissionId) return;
+      const chatRef = collection(db, "missions", currentMissionId, "chat");
+      onSnapshot(chatRef, snapshot => {
+        const box = document.getElementById("chatMessages");
+        box.innerHTML = "";
+        snapshot.forEach(doc => {
+          const div = document.createElement("div");
+          div.textContent = doc.data().text;
+          box.appendChild(div);
+        });
+      });
+    }
+
+    window.sendMessage = async () => {
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+      if (!text || !currentMissionId) return;
+      await addDoc(collection(db, "missions", currentMissionId, "chat"), { text });
+      input.value = "";
+    };
+
+    // === Comms Log ===
+    function loadComms() {
+      if (!currentMissionId) return;
+      const commsRef = collection(db, "missions", currentMissionId, "comms");
+      onSnapshot(commsRef, snapshot => {
+        const box = document.getElementById("commsLog");
+        box.innerHTML = "";
+        snapshot.forEach(doc => {
+          const div = document.createElement("div");
+          div.textContent = doc.data().entry;
+          box.appendChild(div);
+        });
+      });
+    }
+
+    window.logComms = async () => {
+      const input = document.getElementById("commsInput");
+      const entry = input.value.trim();
+      if (!entry || !currentMissionId) return;
+      await addDoc(collection(db, "missions", currentMissionId, "comms"), { entry });
+      input.value = "";
+    };
+
+    // === Files ===
+    async function loadFiles() {
+      if (!currentMissionId) return;
+      const folderRef = ref(storage, currentMissionId);
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = "";
+      const res = await listAll(folderRef);
+      for (let itemRef of res.items) {
+        const url = await getDownloadURL(itemRef);
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = url;
+        a.textContent = itemRef.name;
+        a.target = "_blank";
+        li.appendChild(a);
+        fileList.appendChild(li);
+      }
+    }
+
+    window.uploadFile = async () => {
+      const file = document.getElementById("fileUpload").files[0];
+      if (!file || !currentMissionId) return;
+      const fileRef = ref(storage, `${currentMissionId}/${file.name}`);
+      await uploadBytes(fileRef, file);
+      loadFiles();
+    };
   </script>
 </body>
 </html>
