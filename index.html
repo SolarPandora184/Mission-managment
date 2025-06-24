@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mission Management</title>
   <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js"></script>
   <style>
@@ -22,16 +21,6 @@
     }
     header h1 {
       margin: 0;
-    }
-    #userSection {
-      margin-top: 1rem;
-    }
-    #userSection input {
-      padding: 0.4rem;
-      margin-right: 0.5rem;
-    }
-    #userSection button {
-      padding: 0.4rem 0.8rem;
     }
     nav {
       background-color: #0055a5;
@@ -60,14 +49,6 @@
     .tab.active {
       display: block;
     }
-    #appContent {
-      display: none;
-    }
-    #loginPrompt {
-      display: none;
-      padding: 2rem;
-      text-align: center;
-    }
     input[type="text"], input[type="file"] {
       padding: 0.4rem;
       margin-top: 0.5rem;
@@ -86,69 +67,56 @@
 <body>
   <header>
     <h1>Mission Management</h1>
-    <div id="userSection">
-      <input type="email" id="email" placeholder="Email" />
-      <input type="password" id="password" placeholder="Password" />
-      <button onclick="login()">Login</button>
-      <button onclick="logout()">Logout</button>
-    </div>
   </header>
 
-  <div id="loginPrompt">
-    <p>Please log in to access mission tools.</p>
-  </div>
+  <nav>
+    <button onclick="showTab('missions')">Missions</button>
+    <button onclick="showTab('chat')">Chat</button>
+    <button onclick="showTab('comms')">Comms Log</button>
+    <button onclick="showTab('files')">Files</button>
+    <button onclick="showTab('tracking')">Tracking (WIP)</button>
+  </nav>
 
-  <div id="appContent">
-    <nav>
-      <button onclick="showTab('missions')">Missions</button>
-      <button onclick="showTab('chat')">Chat</button>
-      <button onclick="showTab('comms')">Comms Log</button>
-      <button onclick="showTab('files')">Files</button>
-      <button onclick="showTab('tracking')">Tracking (WIP)</button>
-    </nav>
+  <main>
+    <section id="missions" class="tab active">
+      <h2>Mission List</h2>
+      <div id="missionList"></div>
+      <input type="text" id="newMissionName" placeholder="New mission name" />
+      <button onclick="createMission()">Create Mission</button>
+    </section>
 
-    <main>
-      <section id="missions" class="tab active">
-        <h2>Mission List</h2>
-        <div id="missionList"></div>
-        <input type="text" id="newMissionName" placeholder="New mission name" />
-        <button onclick="createMission()">Create Mission</button>
-      </section>
+    <section id="chat" class="tab">
+      <h2>Chat</h2>
+      <p>Current mission: <span id="currentMissionName"></span></p>
+      <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc; padding: 0.5rem;"></div>
+      <input type="text" id="chatInput" placeholder="Type message..." />
+      <button onclick="sendMessage()">Send</button>
+    </section>
 
-      <section id="chat" class="tab">
-        <h2>Chat</h2>
-        <p>Current mission: <span id="currentMissionName"></span></p>
-        <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc; padding: 0.5rem;"></div>
-        <input type="text" id="chatInput" placeholder="Type message..." />
-        <button onclick="sendMessage()">Send</button>
-      </section>
+    <section id="comms" class="tab">
+      <h2>Comms Log</h2>
+      <p>Current mission: <span id="currentMissionName2"></span></p>
+      <div id="commsLog" style="margin-bottom: 0.5rem;"></div>
+      <input type="text" id="commsInput" placeholder="Log entry" />
+      <button onclick="logComms()">Log</button>
+    </section>
 
-      <section id="comms" class="tab">
-        <h2>Comms Log</h2>
-        <p>Current mission: <span id="currentMissionName2"></span></p>
-        <div id="commsLog" style="margin-bottom: 0.5rem;"></div>
-        <input type="text" id="commsInput" placeholder="Log entry" />
-        <button onclick="logComms()">Log</button>
-      </section>
+    <section id="files" class="tab">
+      <h2>File Sharing</h2>
+      <p>Current mission: <span id="currentMissionName3"></span></p>
+      <input type="file" id="fileUpload" />
+      <button onclick="uploadFile()">Upload</button>
+      <ul id="fileList"></ul>
+    </section>
 
-      <section id="files" class="tab">
-        <h2>File Sharing</h2>
-        <p>Current mission: <span id="currentMissionName3"></span></p>
-        <input type="file" id="fileUpload" />
-        <button onclick="uploadFile()">Upload</button>
-        <ul id="fileList"></ul>
-      </section>
-
-      <section id="tracking" class="tab">
-        <h2>Aircraft Tracking</h2>
-        <p>Tracking integration placeholder.</p>
-      </section>
-    </main>
-  </div>
+    <section id="tracking" class="tab">
+      <h2>Aircraft Tracking</h2>
+      <p>Tracking integration placeholder.</p>
+    </section>
+  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
@@ -162,7 +130,6 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
 
@@ -175,41 +142,6 @@
       document.getElementById("currentMissionName3").textContent = currentMissionName;
     }
 
-    // Auth
-    window.login = async () => {
-      const hardcodedEmail = "Kendrick.uhles@cawgcap.org";
-      const hardcodedPassword = "Kendrick?";
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      if (email !== hardcodedEmail || password !== hardcodedPassword) {
-        alert("Invalid email or password.");
-        return;
-      }
-      await signInWithEmailAndPassword(auth, email, password).catch(err => {
-        console.error("Firebase auth error:", err);
-        alert("Authentication failed.");
-      });
-    };
-
-    window.logout = async () => {
-      await signOut(auth);
-    };
-
-    onAuthStateChanged(auth, (user) => {
-      const appContent = document.getElementById("appContent");
-      const loginPrompt = document.getElementById("loginPrompt");
-      if (user) {
-        document.getElementById("userSection").style.background = '#d0f0d0';
-        appContent.style.display = 'block';
-        loginPrompt.style.display = 'none';
-      } else {
-        document.getElementById("userSection").style.background = '#f0d0d0';
-        appContent.style.display = 'none';
-        loginPrompt.style.display = 'block';
-      }
-    });
-
-    // Tabs
     window.showTab = (id) => {
       document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
       document.getElementById(id).classList.add('active');
