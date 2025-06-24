@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mission Management</title>
   <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
@@ -10,8 +10,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       background-color: #f2f2f2;
     }
     header {
@@ -82,7 +81,7 @@
       <h2>Mission List</h2>
       <div id="missionList"></div>
       <input type="text" id="newMissionName" placeholder="New mission name" />
-      <button onclick="createMission()">Create Mission</button>
+      <button id="createMissionBtn">Create Mission</button>
     </section>
 
     <section id="chat" class="tab">
@@ -117,9 +116,10 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
+    // TODO: Replace with your Firebase config
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -137,9 +137,9 @@
     let currentMissionName = "";
 
     function updateMissionDisplays() {
-      document.getElementById("currentMissionName").textContent = currentMissionName;
-      document.getElementById("currentMissionName2").textContent = currentMissionName;
-      document.getElementById("currentMissionName3").textContent = currentMissionName;
+      document.getElementById("currentMissionName").textContent = currentMissionName || "(none)";
+      document.getElementById("currentMissionName2").textContent = currentMissionName || "(none)";
+      document.getElementById("currentMissionName3").textContent = currentMissionName || "(none)";
     }
 
     window.showTab = (id) => {
@@ -147,43 +147,64 @@
       document.getElementById(id).classList.add('active');
     };
 
-    // === Mission Creation ===
     async function createMission() {
-      const name = document.getElementById("newMissionName").value.trim();
-      if (!name) return;
-      const docRef = await addDoc(collection(db, "missions"), { name });
-      document.getElementById("newMissionName").value = "";
-      currentMissionId = docRef.id;
-      currentMissionName = name;
-      updateMissionDisplays();
-      loadMessages();
-      loadComms();
-      loadFiles();
+      const nameInput = document.getElementById("newMissionName");
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert("Please enter a mission name.");
+        return;
+      }
+      console.log("Creating mission:", name);
+      try {
+        const docRef = await addDoc(collection(db, "missions"), { name });
+        currentMissionId = docRef.id;
+        currentMissionName = name;
+        updateMissionDisplays();
+        await loadMissions();
+        // Clear input
+        nameInput.value = "";
+        // Load mission related data
+        loadMessages();
+        loadComms();
+        loadFiles();
+      } catch (e) {
+        console.error("Error adding mission: ", e);
+        alert("Failed to create mission.");
+      }
     }
 
     async function loadMissions() {
-      const missionsSnapshot = await getDocs(collection(db, "missions"));
-      const list = document.getElementById("missionList");
-      list.innerHTML = "";
-      missionsSnapshot.forEach(doc => {
-        const btn = document.createElement("button");
-        btn.textContent = doc.data().name;
-        btn.onclick = () => {
-          currentMissionId = doc.id;
-          currentMissionName = doc.data().name;
-          updateMissionDisplays();
-          loadMessages();
-          loadComms();
-          loadFiles();
-        };
-        list.appendChild(btn);
-      });
+      try {
+        const missionsSnapshot = await getDocs(collection(db, "missions"));
+        const list = document.getElementById("missionList");
+        list.innerHTML = "";
+        missionsSnapshot.forEach(doc => {
+          const btn = document.createElement("button");
+          btn.textContent = doc.data().name;
+          btn.onclick = () => {
+            currentMissionId = doc.id;
+            currentMissionName = doc.data().name;
+            updateMissionDisplays();
+            loadMessages();
+            loadComms();
+            loadFiles();
+          };
+          list.appendChild(btn);
+        });
+      } catch(e) {
+        console.error("Error loading missions: ", e);
+      }
     }
+
+    // Load missions on start
     loadMissions();
 
     // === Chat ===
     function loadMessages() {
-      if (!currentMissionId) return;
+      if (!currentMissionId) {
+        document.getElementById("chatMessages").innerHTML = "<i>No mission selected</i>";
+        return;
+      }
       const chatRef = collection(db, "missions", currentMissionId, "chat");
       onSnapshot(chatRef, snapshot => {
         const box = document.getElementById("chatMessages");
@@ -199,14 +220,23 @@
     window.sendMessage = async () => {
       const input = document.getElementById("chatInput");
       const text = input.value.trim();
-      if (!text || !currentMissionId) return;
-      await addDoc(collection(db, "missions", currentMissionId, "chat"), { text });
-      input.value = "";
+      if (!text) return alert("Enter a chat message.");
+      if (!currentMissionId) return alert("Select a mission first.");
+      try {
+        await addDoc(collection(db, "missions", currentMissionId, "chat"), { text });
+        input.value = "";
+      } catch(e) {
+        console.error("Error sending message:", e);
+        alert("Failed to send message.");
+      }
     };
 
-    // === Comms Log ===
+    // === Comms ===
     function loadComms() {
-      if (!currentMissionId) return;
+      if (!currentMissionId) {
+        document.getElementById("commsLog").innerHTML = "<i>No mission selected</i>";
+        return;
+      }
       const commsRef = collection(db, "missions", currentMissionId, "comms");
       onSnapshot(commsRef, snapshot => {
         const box = document.getElementById("commsLog");
@@ -222,37 +252,63 @@
     window.logComms = async () => {
       const input = document.getElementById("commsInput");
       const entry = input.value.trim();
-      if (!entry || !currentMissionId) return;
-      await addDoc(collection(db, "missions", currentMissionId, "comms"), { entry });
-      input.value = "";
+      if (!entry) return alert("Enter a comms log entry.");
+      if (!currentMissionId) return alert("Select a mission first.");
+      try {
+        await addDoc(collection(db, "missions", currentMissionId, "comms"), { entry });
+        input.value = "";
+      } catch(e) {
+        console.error("Error logging comms:", e);
+        alert("Failed to log comms.");
+      }
     };
 
     // === Files ===
     async function loadFiles() {
-      if (!currentMissionId) return;
+      if (!currentMissionId) {
+        document.getElementById("fileList").innerHTML = "<i>No mission selected</i>";
+        return;
+      }
       const folderRef = ref(storage, currentMissionId);
       const fileList = document.getElementById("fileList");
       fileList.innerHTML = "";
-      const res = await listAll(folderRef);
-      for (let itemRef of res.items) {
-        const url = await getDownloadURL(itemRef);
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.href = url;
-        a.textContent = itemRef.name;
-        a.target = "_blank";
-        li.appendChild(a);
-        fileList.appendChild(li);
+      try {
+        const res = await listAll(folderRef);
+        for (let itemRef of res.items) {
+          const url = await getDownloadURL(itemRef);
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = url;
+          a.textContent = itemRef.name;
+          a.target = "_blank";
+          li.appendChild(a);
+          fileList.appendChild(li);
+        }
+      } catch(e) {
+        console.error("Error loading files:", e);
+        fileList.innerHTML = "<i>Error loading files</i>";
       }
     }
 
     window.uploadFile = async () => {
-      const file = document.getElementById("fileUpload").files[0];
-      if (!file || !currentMissionId) return;
+      const fileInput = document.getElementById("fileUpload");
+      const file = fileInput.files[0];
+      if (!file) return alert("Select a file to upload.");
+      if (!currentMissionId) return alert("Select a mission first.");
       const fileRef = ref(storage, `${currentMissionId}/${file.name}`);
-      await uploadBytes(fileRef, file);
-      loadFiles();
+      try {
+        await uploadBytes(fileRef, file);
+        fileInput.value = "";
+        loadFiles();
+      } catch(e) {
+        console.error("Error uploading file:", e);
+        alert("Failed to upload file.");
+      }
     };
+
+    // Attach createMission to window so the button onclick works
+    window.createMission = createMission;
+
   </script>
 </body>
 </html>
