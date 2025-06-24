@@ -5,10 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Mission Management</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 1rem; }
+  body { font-family: Arial, sans-serif; margin: 1rem; position: relative; }
   section { margin-bottom: 2rem; }
   h2 { border-bottom: 1px solid #ccc; }
-  input, button, textarea { margin-top: 0.5rem; display: block; }
+
+  /* Mission section styles */
+  #missions {
+    position: relative;
+  }
+
+  #missionSearch {
+    margin-bottom: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+
   #missionList {
     border: 1px solid #ccc;
     max-height: 200px;
@@ -29,6 +42,53 @@
   #missionList button:hover {
     background: #ddd;
   }
+
+  /* Create mission button top-right */
+  #createMissionBtn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  /* Modal overlay and box */
+  #modalOverlay {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  #modalBox {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  }
+  #modalBox h3 {
+    margin-top: 0;
+  }
+  #modalBox input[type="text"] {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    font-size: 1rem;
+    margin: 0.5rem 0 1rem 0;
+    box-sizing: border-box;
+  }
+  #modalBox button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+  }
+
 </style>
 </head>
 <body>
@@ -39,7 +99,6 @@
   <h2>Missions</h2>
   <input type="text" id="missionSearch" placeholder="Search missions..." />
   <div id="missionList"></div>
-  <input type="text" id="newMissionName" placeholder="New mission name" />
   <button id="createMissionBtn">Create Mission</button>
 </section>
 
@@ -67,6 +126,18 @@
   <ul id="fileList"></ul>
 </section>
 
+<!-- Modal for creating mission -->
+<div id="modalOverlay">
+  <div id="modalBox">
+    <h3>Create New Mission</h3>
+    <input type="text" id="modalMissionName" placeholder="Mission name" />
+    <div>
+      <button id="modalCreateBtn">Create</button>
+      <button id="modalCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const missions = [];
   let currentMission = null;
@@ -81,6 +152,13 @@
   const chatMessagesEl = document.getElementById('chatMessages');
   const commsLogEl = document.getElementById('commsLog');
   const fileListEl = document.getElementById('fileList');
+
+  // Modal Elements
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalMissionNameInput = document.getElementById('modalMissionName');
+  const modalCreateBtn = document.getElementById('modalCreateBtn');
+  const modalCancelBtn = document.getElementById('modalCancelBtn');
+  const createMissionBtn = document.getElementById('createMissionBtn');
 
   function updateMissionDisplays() {
     const name = currentMission ? currentMission.name : 'None';
@@ -101,6 +179,7 @@
           renderChat();
           renderComms();
           renderFiles();
+          closeModal();
         };
         missionListEl.appendChild(btn);
       });
@@ -149,11 +228,28 @@
     });
   }
 
-  document.getElementById('createMissionBtn').onclick = () => {
-    const input = document.getElementById('newMissionName');
-    const name = input.value.trim();
+  // Modal open/close
+  function openModal() {
+    modalOverlay.style.display = 'flex';
+    modalMissionNameInput.value = '';
+    modalMissionNameInput.focus();
+  }
+  function closeModal() {
+    modalOverlay.style.display = 'none';
+  }
+
+  // Create mission via modal
+  function createMissionFromModal() {
+    const name = modalMissionNameInput.value.trim();
     if (!name) {
       alert('Please enter a mission name');
+      modalMissionNameInput.focus();
+      return;
+    }
+    // Check if mission already exists (optional)
+    if (missions.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+      alert('Mission with this name already exists');
+      modalMissionNameInput.focus();
       return;
     }
     const newMission = { name, chat: [], comms: [], files: [] };
@@ -161,11 +257,22 @@
     currentMission = newMission;
     updateMissionDisplays();
     refreshMissionList();
-    input.value = '';
     renderChat();
     renderComms();
     renderFiles();
-  };
+    closeModal();
+  }
+
+  createMissionBtn.onclick = openModal;
+  modalCancelBtn.onclick = closeModal;
+  modalCreateBtn.onclick = createMissionFromModal;
+
+  // Also allow pressing Enter key in modal input to submit form
+  modalMissionNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      createMissionFromModal();
+    }
+  });
 
   document.getElementById('sendChatBtn').onclick = () => {
     const input = document.getElementById('chatInput');
