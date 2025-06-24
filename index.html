@@ -31,25 +31,27 @@
       document.getElementById("currentMissionName3").textContent = currentMissionName || "None";
     }
 
-    window.createMission = async () => {
+    async function createMissionFromInput() {
       const input = document.getElementById("newMissionName");
       const name = input.value.trim();
       if (!name) {
         alert("Please enter a mission name");
         return;
       }
-
-      const docRef = await addDoc(collection(db, "missions"), { name });
+      const docRef = await addMission(name);
       currentMissionId = docRef.id;
       currentMissionName = name;
       input.value = "";
-
       updateMissionDisplays();
       await loadMissions();
       loadChat();
       loadComms();
       loadFiles();
-    };
+    }
+
+    async function addMission(name) {
+      return await addDoc(collection(db, "missions"), { name });
+    }
 
     window.loadMissions = async () => {
       const snap = await getDocs(collection(db, "missions"));
@@ -60,18 +62,6 @@
 
       snap.forEach(doc => {
         const name = doc.data().name;
-
-        const btn = document.createElement("button");
-        btn.textContent = name;
-        btn.onclick = () => {
-          currentMissionId = doc.id;
-          currentMissionName = name;
-          updateMissionDisplays();
-          loadChat();
-          loadComms();
-          loadFiles();
-        };
-        list.appendChild(btn);
 
         const option = document.createElement("option");
         option.value = doc.id;
@@ -161,6 +151,7 @@
 
     window.onload = () => {
       loadMissions();
+      document.getElementById("createMissionBtn").addEventListener("click", createMissionFromInput);
     };
   </script>
   <style>
@@ -177,9 +168,8 @@
 
 <section id="missions">
   <h2>Missions</h2>
-  <div id="missionList"></div>
   <input type="text" id="newMissionName" placeholder="New mission name" />
-  <button onclick="createMission()">Create Mission</button>
+  <button id="createMissionBtn">Create Mission</button>
   <label for="missionDropdown">Or select mission:</label>
   <select id="missionDropdown" onchange="selectMissionFromDropdown(event)"></select>
 </section>
