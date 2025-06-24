@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mission Management</title>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header, nav, main {
+      padding: 1rem;
+    }
+    .tab {
+      display: none;
+    }
+    .tab.active {
+      display: block;
+    }
+    nav button {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mission Management</h1>
+    <div id="userSection">
+      <input type="email" id="email" placeholder="Email" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <nav>
+    <button onclick="showTab('missions')">Missions</button>
+    <button onclick="showTab('chat')">Chat</button>
+    <button onclick="showTab('comms')">Comms Log</button>
+    <button onclick="showTab('files')">Files</button>
+    <button onclick="showTab('tracking')">Tracking (WIP)</button>
+  </nav>
+
+  <main>
+    <section id="missions" class="tab active">
+      <h2>Mission List</h2>
+      <div id="missionList"></div>
+      <input type="text" id="newMissionName" placeholder="New mission name" />
+      <button onclick="createMission()">Create Mission</button>
+    </section>
+
+    <section id="chat" class="tab">
+      <h2>Chat</h2>
+      <div id="chatMessages" style="height:200px; overflow:auto; border:1px solid #ccc;"></div>
+      <input type="text" id="chatInput" placeholder="Type message..." />
+      <button onclick="sendMessage()">Send</button>
+    </section>
+
+    <section id="comms" class="tab">
+      <h2>Comms Log</h2>
+      <div id="commsLog"></div>
+      <input type="text" id="commsInput" placeholder="Log entry" />
+      <button onclick="logComms()">Log</button>
+    </section>
+
+    <section id="files" class="tab">
+      <h2>File Sharing</h2>
+      <input type="file" id="fileUpload" />
+      <button onclick="uploadFile()">Upload</button>
+      <ul id="fileList"></ul>
+    </section>
+
+    <section id="tracking" class="tab">
+      <h2>Aircraft Tracking</h2>
+      <p>Tracking integration placeholder.</p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Auth
+    window.login = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      await signInWithEmailAndPassword(auth, email, password);
+    };
+
+    window.logout = async () => {
+      await signOut(auth);
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      document.getElementById("userSection").style.background = user ? '#d0f0d0' : '#f0d0d0';
+    });
+
+    // Tabs
+    window.showTab = (id) => {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    };
+
+    // Missions
+    window.createMission = async () => {
+      const name = document.getElementById("newMissionName").value;
+      await addDoc(collection(db, "missions"), { name });
+      document.getElementById("newMissionName").value = "";
+    };
+
+    const missionList = document.getElementById("missionList");
+    onSnapshot(collection(db, "missions"), (snapshot) => {
+      missionList.innerHTML = "";
+      snapshot.forEach(doc => {
+        const div = document.createElement("div");
+        div.textContent = doc.data().name;
+        missionList.appendChild(div);
+      });
+    });
+
+    // Chat
+    window.sendMessage = async () => {
+      const input = document.getElementById("chatInput");
+      await addDoc(collection(db, "chat"), {
+        text: input.value,
+        timestamp: Date.now(),
+        user: auth.currentUser?.email || "anon"
+      });
+      input.value = "";
+    };
+
+    const chatMessages = document.getElementById("chatMessages");
+    onSnapshot(collection(db, "chat"), (snapshot) => {
+      chatMessages.innerHTML = "";
+      snapshot.forEach(doc => {
+        const msg = doc.data();
+        const p = document.createElement("p");
+        p.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.user}: ${msg.text}`;
+        chatMessages.appendChild(p);
+      });
+    });
+
+    // Comms Log
+    window.logComms = async () => {
+      const input = document.getElementById("commsInput");
+      await addDoc(collection(db, "comms"), {
+        entry: input.value,
+        timestamp: Date.now(),
+        user: auth.currentUser?.email || "anon"
+      });
+      input.value = "";
+    };
+
+    const commsLog = document.getElementById("commsLog");
+    onSnapshot(collection(db, "comms"), (snapshot) => {
+      commsLog.innerHTML = "";
+      snapshot.forEach(doc => {
+        const log = doc.data();
+        const p = document.createElement("p");
+        p.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.user}: ${log.entry}`;
+        commsLog.appendChild(p);
+      });
+    });
+
+    // File Upload
+    window.uploadFile = async () => {
+      const file = document.getElementById("fileUpload").files[0];
+      if (!file) return;
+      const fileRef = ref(storage, `uploads/${file.name}`);
+      await uploadBytes(fileRef, file);
+    };
+
+    const fileList = document.getElementById("fileList");
+    const updateFiles = async () => {
+      const listRef = ref(storage, "uploads");
+      const res = await listAll(listRef);
+      fileList.innerHTML = "";
+      for (const itemRef of res.items) {
+        const url = await getDownloadURL(itemRef);
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = url;
+        a.textContent = itemRef.name;
+        a.target = "_blank";
+        li.appendChild(a);
+        fileList.appendChild(li);
+      }
+    };
+    updateFiles();
+  </script>
+</body>
+</html>
