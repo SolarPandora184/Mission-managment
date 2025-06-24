@@ -120,7 +120,7 @@
 </div>
 
 <script>
-  // Correct Firebase config with databaseURL exactly matching your Firebase console
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyAbkgmgqYqatkhmfDKnLHa4S52z9Jcz1lw",
     authDomain: "mission-9dd26.firebaseapp.com",
@@ -135,6 +135,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
+  // Missions stored in-memory only (local)
   let missions = [];
   let currentMission = null;
 
@@ -147,46 +148,56 @@
   const commsLogEl = document.getElementById('commsLog');
   const fileListEl = document.getElementById('fileList');
 
-  function listenToMissions() {
-    db.ref('missions').on('value', snapshot => {
-      const data = snapshot.val() || {};
-      missions = Object.entries(data).map(([id, m]) => ({ id, ...m }));
-      console.log("Loaded missions:", missions);
-      renderMissionList();
-    }, error => {
-      console.error('Firebase read error:', error);
+  // -------------------------------
+  // Missions management (local only)
+  // -------------------------------
+  function renderMissionList() {
+    const filter = missionSearchEl.value.toLowerCase();
+    missionListEl.innerHTML = '';
+    missions.filter(m => (m.name + ' ' + m.number).toLowerCase().includes(filter)).forEach((m, i) => {
+      const wrapper = document.createElement('div');
+      const label = document.createElement('span');
+      label.textContent = `${m.name} (${m.number})`;
+      const viewBtn = document.createElement('button');
+      viewBtn.textContent = 'View';
+      viewBtn.onclick = () => {
+        currentMission = { ...m }; // clone for editing
+        listenToMissionData(currentMission);
+        showMissionInfo();
+      };
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.classList.add('deleteBtn');
+      deleteBtn.onclick = () => {
+        const confirmText = prompt(`Type DELETE to confirm deleting "${m.name} (${m.number})"`);
+        if (confirmText === 'DELETE') {
+          // Remove mission locally
+          missions = missions.filter(mis => mis !== m);
+          // Remove its data from Firebase
+          if (m.firebaseId) {
+            db.ref('missionData/' + m.firebaseId).remove().catch(console.error);
+          }
+          renderMissionList();
+          showMissionList();
+        }
+      };
+      wrapper.appendChild(label);
+      wrapper.appendChild(viewBtn);
+      wrapper.appendChild(deleteBtn);
+      missionListEl.appendChild(wrapper);
     });
   }
 
-  function addMission(name, number) {
-    const ref = db.ref('missions').push();
-    ref.set({
-      name,
-      number,
-      chat: [],
-      comms: [],
-      files: []
-    })
-    .then(() => console.log('Mission added successfully'))
-    .catch(err => console.error('Error adding mission:', err));
-  }
-
-  function updateCurrentMission() {
-    if (!currentMission?.id) return;
-    db.ref('missions/' + currentMission.id).update({
-      chat: currentMission.chat,
-      comms: currentMission.comms,
-      files: currentMission.files
-    })
-    .then(() => console.log('Mission updated successfully'))
-    .catch(err => console.error('Error updating mission:', err));
-  }
-
-  function deleteMission(id) {
-    db.ref('missions/' + id).remove()
-    .then(() => console.log('Mission deleted:', id))
-    .catch(err => console.error('Error deleting mission:', err));
-  }
+  document.getElementById('createMissionBtn').onclick = () => {
+    const name = prompt('Mission Name:');
+    if (!name) return;
+    const number = prompt('Mission Number:');
+    if (!number) return;
+    // Add mission locally, with a firebaseId for data storage
+    const newMission = { name, number, firebaseId: generateId() };
+    missions.push(newMission);
+    renderMissionList();
+  };
 
   function showMissionList() {
     missionListContainer.classList.add('active');
@@ -198,43 +209,38 @@
     missionListContainer.classList.remove('active');
     missionInfoContainer.classList.add('active');
     missionTitle.textContent = `${currentMission.name} (${currentMission.number})`;
-    renderChat();
-    renderComms();
-    renderFiles();
   }
 
-  function renderMissionList() {
-    const filter = missionSearchEl.value.toLowerCase();
-    missionListEl.innerHTML = '';
-    missions.filter(m => (m.name + ' ' + m.number).toLowerCase().includes(filter)).forEach(m => {
-      const wrapper = document.createElement('div');
+  // -------------------------------
+  // Firebase data for chat, comms, files inside mission
+  // -------------------------------
 
-      const label = document.createElement('span');
-      label.textContent = `${m.name} (${m.number})`;
-
-      const viewBtn = document.createElement('button');
-      viewBtn.textContent = 'View';
-      viewBtn.onclick = () => {
-        currentMission = JSON.parse(JSON.stringify(m)); // deep clone
-        showMissionInfo();
-      };
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.classList.add('deleteBtn');
-      deleteBtn.onclick = () => {
-        const confirmText = prompt(`Type DELETE to confirm deleting "${m.name} (${m.number})"`);
-        if (confirmText === 'DELETE') {
-          deleteMission(m.id);
-        }
-      };
-
-      wrapper.appendChild(label);
-      wrapper.appendChild(viewBtn);
-      wrapper.appendChild(deleteBtn);
-      missionListEl.appendChild(wrapper);
+  function listenToMissionData(mission) {
+    const missionRef = db.ref('missionData/' + mission.firebaseId);
+    missionRef.on('value', snapshot => {
+      const data = snapshot.val() || {};
+      mission.chat = data.chat || [];
+      mission.comms = data.comms || [];
+      mission.files = data.files || [];
+      renderChat();
+      renderComms();
+      renderFiles();
     });
   }
+
+  function updateCurrentMission() {
+    if (!currentMission?.firebaseId) return;
+    const missionRef = db.ref('missionData/' + currentMission.firebaseId);
+    missionRef.set({
+      chat: currentMission.chat,
+      comms: currentMission.comms,
+      files: currentMission.files
+    }).catch(console.error);
+  }
+
+  // -------------------------------
+  // Rendering & Events for chat, comms, files
+  // -------------------------------
 
   function renderChat() {
     chatMessagesEl.innerHTML = '';
@@ -267,16 +273,6 @@
       fileListEl.appendChild(li);
     });
   }
-
-  document.getElementById('createMissionBtn').onclick = () => {
-    const name = prompt('Mission Name:');
-    console.log('Mission Name:', name);
-    if (!name) return;
-    const number = prompt('Mission Number:');
-    console.log('Mission Number:', number);
-    if (!number) return;
-    addMission(name, number);
-  };
 
   document.getElementById('sendChatBtn').onclick = () => {
     const input = document.getElementById('chatInput');
@@ -311,6 +307,7 @@
     renderFiles();
   };
 
+  // Tabs
   document.querySelectorAll('.tabBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
@@ -323,7 +320,14 @@
   document.getElementById('backBtn').onclick = showMissionList;
   missionSearchEl.oninput = renderMissionList;
 
-  listenToMissions();
+  // Utility: simple id generator for local mission firebase keys
+  function generateId() {
+    return Math.random().toString(36).slice(2);
+  }
+
+  // Start showing mission list on load
+  showMissionList();
+  renderMissionList();
 </script>
 
 </body>
