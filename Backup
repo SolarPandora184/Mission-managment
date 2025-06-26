@@ -62,9 +62,37 @@
     }
     #fileList li { padding: 5px 0; border-bottom: 1px solid #444; }
     #chatInput, #commsInput { width: 100%; }
+    #loginOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #loginBox {
+      background: var(--panel);
+      padding: 2rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #loginBox input {
+      width: 100%;
+    }
   </style>
 </head>
 <body>
+  <!-- Login Prompt -->
+  <div id="loginOverlay">
+    <div id="loginBox">
+      <h2>Enter Your Name</h2>
+      <input type="text" id="usernameInput" placeholder="e.g. Noelle" />
+      <button onclick="setUsername()">Enter</button>
+    </div>
+  </div>
+
   <div class="grid">
     <!-- Incident Command -->
     <div class="panel">
@@ -119,6 +147,23 @@
     const commsLogEl = document.getElementById('commsLog');
     const fileListEl = document.getElementById('fileList');
 
+    let username = localStorage.getItem('username');
+
+    function setUsername() {
+      const input = document.getElementById('usernameInput');
+      const name = input.value.trim();
+      if (!name) return alert("Enter your name");
+      username = name;
+      localStorage.setItem('username', username);
+      document.getElementById('loginOverlay').style.display = 'none';
+    }
+
+    if (!username) {
+      document.getElementById('loginOverlay').style.display = 'flex';
+    } else {
+      document.getElementById('loginOverlay').style.display = 'none';
+    }
+
     function getTimeStamp() {
       const now = new Date();
       return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -127,10 +172,11 @@
     function sendChat() {
       const input = document.getElementById('chatInput');
       const msg = input.value.trim();
-      if (!msg) return;
+      if (!msg || !username) return;
       db.ref(`missions/${missionKey}/chat`).push({
         text: msg,
-        time: getTimeStamp()
+        time: getTimeStamp(),
+        user: username
       });
       input.value = '';
     }
@@ -159,7 +205,10 @@
       chatMessagesEl.innerHTML = '';
       if (data) Object.values(data).forEach(msg => {
         const div = document.createElement('div');
-        div.textContent = `${msg.time || '??'} - ${msg.text || msg}`;
+        const name = msg.user || 'Unknown';
+        const time = msg.time || '??';
+        const text = msg.text || msg;
+        div.textContent = `[${time}] ${name}: ${text}`;
         chatMessagesEl.appendChild(div);
       });
     });
