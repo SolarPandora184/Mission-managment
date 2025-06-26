@@ -77,9 +77,15 @@
       padding: 2rem;
       border-radius: 10px;
       text-align: center;
+      width: 300px;
     }
     #loginBox input {
       width: 100%;
+    }
+    #loginError {
+      color: #ff4c4c;
+      margin-top: 10px;
+      display: none;
     }
   </style>
 </head>
@@ -87,9 +93,11 @@
   <!-- Login Prompt -->
   <div id="loginOverlay">
     <div id="loginBox">
-      <h2>Enter Your Name</h2>
-      <input type="text" id="usernameInput" placeholder="e.g. Noelle" />
+      <h2>Login to Mission</h2>
+      <input type="text" id="usernameInput" placeholder="Enter your name" autocomplete="off" />
+      <input type="password" id="passwordInput" placeholder="Enter your password" autocomplete="off" />
       <button onclick="setUsername()">Enter</button>
+      <p id="loginError"></p>
     </div>
   </div>
 
@@ -129,6 +137,14 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
+    // Hardcoded username-password pairs
+    const userPasswords = {
+      "Noelle": "SuperSecret1",
+      "Alex": "Password123",
+      "Charlie": "LetMeIn!",
+      // Add more users here as needed
+    };
+
     const firebaseConfig = {
       apiKey: "AIzaSyAbkgmgqYqatkhmfDKnLHa4S52z9Jcz1lw",
       authDomain: "mission-9dd26.firebaseapp.com",
@@ -149,13 +165,35 @@
 
     let username = localStorage.getItem('username');
 
+    function showError(msg) {
+      const errorEl = document.getElementById('loginError');
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+
     function setUsername() {
-      const input = document.getElementById('usernameInput');
-      const name = input.value.trim();
-      if (!name) return alert("Enter your name");
+      const name = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+
+      if (!name || !password) {
+        showError("Both fields are required.");
+        return;
+      }
+
+      if (!(name in userPasswords)) {
+        showError("Unknown user.");
+        return;
+      }
+
+      if (password !== userPasswords[name]) {
+        showError("Incorrect password.");
+        return;
+      }
+
       username = name;
       localStorage.setItem('username', username);
       document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('loginError').style.display = 'none';
     }
 
     if (!username) {
