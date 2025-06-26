@@ -101,7 +101,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Firebase init
     const firebaseConfig = {
       apiKey: "AIzaSyAbkgmgqYqatkhmfDKnLHa4S52z9Jcz1lw",
       authDomain: "mission-9dd26.firebaseapp.com",
@@ -115,18 +114,24 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Simple demo mission key (can be set dynamically later)
     const missionKey = 'demo-mission';
-
     const chatMessagesEl = document.getElementById('chatMessages');
     const commsLogEl = document.getElementById('commsLog');
     const fileListEl = document.getElementById('fileList');
+
+    function getTimeStamp() {
+      const now = new Date();
+      return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
 
     function sendChat() {
       const input = document.getElementById('chatInput');
       const msg = input.value.trim();
       if (!msg) return;
-      db.ref(`missions/${missionKey}/chat`).push(msg);
+      db.ref(`missions/${missionKey}/chat`).push({
+        text: msg,
+        time: getTimeStamp()
+      });
       input.value = '';
     }
 
@@ -134,7 +139,10 @@
       const input = document.getElementById('commsInput');
       const entry = input.value.trim();
       if (!entry) return;
-      db.ref(`missions/${missionKey}/comms`).push(entry);
+      db.ref(`missions/${missionKey}/comms`).push({
+        text: entry,
+        time: getTimeStamp()
+      });
       input.value = '';
     }
 
@@ -146,13 +154,12 @@
       input.value = '';
     }
 
-    // Realtime listeners
     db.ref(`missions/${missionKey}/chat`).on('value', snap => {
       const data = snap.val();
       chatMessagesEl.innerHTML = '';
       if (data) Object.values(data).forEach(msg => {
         const div = document.createElement('div');
-        div.textContent = msg;
+        div.textContent = `${msg.time || '??'} - ${msg.text || msg}`;
         chatMessagesEl.appendChild(div);
       });
     });
@@ -162,7 +169,7 @@
       commsLogEl.innerHTML = '';
       if (data) Object.values(data).forEach(entry => {
         const div = document.createElement('div');
-        div.textContent = entry;
+        div.textContent = `${entry.time || '??'} - ${entry.text || entry}`;
         commsLogEl.appendChild(div);
       });
     });
@@ -177,7 +184,6 @@
       });
     });
 
-    // Leaflet map
     let map = L.map('map').setView([39.5, -98.35], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
