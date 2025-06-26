@@ -87,6 +87,14 @@
       margin-top: 10px;
       display: none;
     }
+    #logoutBtn {
+      margin-bottom: 10px;
+      align-self: flex-start;
+      background: #ff4c4c;
+      border-color: #cc0000;
+      cursor: pointer;
+      padding: 0.3rem 0.7rem;
+    }
   </style>
 </head>
 <body>
@@ -105,6 +113,7 @@
     <!-- Incident Command -->
     <div class="panel">
       <h2>Incident Command</h2>
+      <button id="logoutBtn" onclick="logout()" style="display:none;">Logout</button>
       <div id="chatMessages"></div>
       <input type="text" id="chatInput" placeholder="Message #operations" />
       <button onclick="sendChat()">Send</button>
@@ -194,12 +203,26 @@
       localStorage.setItem('username', username);
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('loginError').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('chatInput').disabled = false;
+    }
+
+    function logout() {
+      localStorage.removeItem('username');
+      username = null;
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('chatInput').disabled = true;
     }
 
     if (!username) {
       document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('chatInput').disabled = true;
     } else {
       document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('chatInput').disabled = false;
     }
 
     function getTimeStamp() {
