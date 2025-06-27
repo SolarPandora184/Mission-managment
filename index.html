@@ -15,6 +15,9 @@
       --highlight: #3a8eed;
     }
     * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+    }
     body {
       margin: 0;
       font-family: sans-serif;
@@ -28,6 +31,8 @@
       height: 100vh;
       gap: 10px;
       padding: 10px;
+      align-items: stretch;
+      justify-items: stretch;
     }
     .panel {
       background: var(--panel);
@@ -36,6 +41,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      height: 100%;
+      min-height: 0; /* Added for flexbox shrink */
     }
     .panel h2 {
       margin: 0 0 10px;
@@ -43,7 +50,12 @@
       border-bottom: 1px solid var(--accent);
       padding-bottom: 5px;
     }
-    #map { flex: 1; border-radius: 8px; }
+    #map {
+      flex-grow: 1;
+      width: 100%;
+      border-radius: 8px;
+      min-height: 0;
+    }
     #chatMessages, #commsLog, #fileList {
       flex: 1;
       overflow-y: auto;
@@ -62,70 +74,64 @@
     }
     #fileList li { padding: 5px 0; border-bottom: 1px solid #444; }
     #chatInput, #commsInput { width: 100%; }
-    #loginOverlay {
+    #profileBtn {
       position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.9);
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      bottom: 15px;
+      right: 15px;
+      background: var(--highlight);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
       z-index: 1000;
     }
-    #loginBox {
-      background: var(--panel);
-      padding: 2rem;
-      border-radius: 10px;
-      text-align: center;
-      width: 300px;
-    }
-    #loginBox input {
-      width: 100%;
-    }
-    #loginError {
-      color: #ff4c4c;
-      margin-top: 10px;
+    #profileSearch {
       display: none;
+      position: fixed;
+      bottom: 60px;
+      right: 15px;
+      background: var(--panel);
+      padding: 1rem;
+      border-radius: 8px;
+      width: 300px;
+      z-index: 1000;
     }
-    #logoutBtn {
-      margin-bottom: 10px;
-      align-self: flex-start;
-      background: #ff4c4c;
-      border-color: #cc0000;
-      cursor: pointer;
-      padding: 0.3rem 0.7rem;
+    #statusBar {
+      font-size: 0.9rem;
+      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
-  <!-- Login Prompt -->
-  <div id="loginOverlay">
-    <div id="loginBox">
-      <h2>Login to Mission</h2>
-      <input type="text" id="usernameInput" placeholder="Enter your name" autocomplete="off" />
-      <input type="password" id="passwordInput" placeholder="Enter your password" autocomplete="off" />
-      <button onclick="setUsername()">Enter</button>
-      <p id="loginError"></p>
-    </div>
+  <div id="adminLogin" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999">
+    <img src="Logo" alt="Logo" style="width:300px;margin-bottom:1rem" />
+    <h2>Login</h2>
+    <input id="loginUsername" placeholder="Username" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button onclick="loginUser()">Login</button>
+    <p id="loginError" style="color:red"></p>
+    <p style="margin-top:10px;">
+      <a href="https://forms.office.com/r/gDySnXnE7X" target="_blank" style="color:#3a8eed; text-decoration: underline;">
+        Sign up or Reset password
+      </a>
+    </p>
   </div>
 
-  <div class="grid">
-    <!-- Incident Command -->
+  <div class="grid" id="mainApp" style="display:none">
     <div class="panel">
       <h2>Incident Command</h2>
-      <button id="logoutBtn" onclick="logout()" style="display:none;">Logout</button>
       <div id="chatMessages"></div>
       <input type="text" id="chatInput" placeholder="Message #operations" />
       <button onclick="sendChat()">Send</button>
     </div>
 
-    <!-- Unit Tracking -->
     <div class="panel">
       <h2>Unit Tracking</h2>
+      <div id="statusBar">Loading CAP aircraft...</div>
       <div id="map"></div>
     </div>
 
-    <!-- Comms Log -->
     <div class="panel">
       <h2>Comms Log</h2>
       <div id="commsLog"></div>
@@ -133,7 +139,6 @@
       <button onclick="logComms()">Log</button>
     </div>
 
-    <!-- File Sharing -->
     <div class="panel">
       <h2>File Sharing</h2>
       <input type="file" id="fileUpload" />
@@ -142,19 +147,106 @@
     </div>
   </div>
 
+  <button id="profileBtn" onclick="toggleProfileSearch()">Search Profiles</button>
+  <div id="profileSearch">
+    <input type="text" id="searchBox" placeholder="Search by name..." oninput="searchProfile()" />
+    <div id="profileResult" style="margin-top:10px"></div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // Hardcoded username-password pairs
-    const userPasswords = {
-      "Kendrick Uhles": "Ku2023!@",
-      "Laramie Uhles": "Missions2025",
-      "Ryan Uhles": "IC2025!",
-      // Add more users here as needed
-    };
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
     const firebaseConfig = {
+      apiKey: "AIzaSyDRaTNFRTV0SLdUgfjVnO0CQT44yuElDh0",
+      authDomain: "test-data-base-6da39.firebaseapp.com",
+      projectId: "test-data-base-6da39",
+      storageBucket: "test-data-base-6da39.firebasestorage.app",
+      messagingSenderId: "342303847512",
+      appId: "1:342303847512:web:74688627a824be8130462d",
+      measurementId: "G-7XN8HCS0G1",
+      databaseURL: "https://test-data-base-6da39-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const dbCAP = getDatabase(app);
+    const map = L.map('map').setView([37.5, -119], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const statusBar = document.getElementById('statusBar');
+    const markers = {};
+
+    async function fetchCAPAircraftList() {
+      const snap = await get(ref(dbCAP, 'capAircraft'));
+      const data = snap.val();
+      if (!data) return [];
+      return Object.values(data).map(ac => ac.icao24.toLowerCase());
+    }
+
+    async function fetchLiveAircraft() {
+      const res = await fetch("https://opensky-network.org/api/states/all");
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.states || [];
+    }
+
+    async function updateAircraftMarkers() {
+      const capIcaoList = await fetchCAPAircraftList();
+      const liveAircraft = await fetchLiveAircraft();
+      if (!liveAircraft) {
+        statusBar.textContent = "Error loading live aircraft.";
+        return;
+      }
+
+      statusBar.textContent = `Tracking ${capIcaoList.length} CAP aircraft`;
+      const active = new Set();
+
+      liveAircraft.forEach(state => {
+        const icao = state[0].toLowerCase();
+        if (!capIcaoList.includes(icao)) return;
+
+        const callsign = state[1]?.trim() || 'N/A';
+        const lat = state[6];
+        const lng = state[5];
+        const alt = state[7];
+        const speed = state[9];
+
+        if (lat === null || lng === null) return;
+        active.add(icao);
+
+        if (!markers[icao]) {
+          markers[icao] = L.marker([lat, lng]).addTo(map).bindPopup('Loading...');
+        } else {
+          markers[icao].setLatLng([lat, lng]);
+        }
+
+        markers[icao].setPopupContent(`
+          <b>Callsign:</b> ${callsign}<br>
+          <b>ICAO24:</b> ${icao}<br>
+          <b>Alt:</b> ${alt?.toFixed(0) || 'N/A'} ft<br>
+          <b>Speed:</b> ${speed?.toFixed(0) || 'N/A'} kt
+        `);
+      });
+
+      Object.keys(markers).forEach(icao => {
+        if (!active.has(icao)) {
+          map.removeLayer(markers[icao]);
+          delete markers[icao];
+        }
+      });
+    }
+
+    setInterval(updateAircraftMarkers, 15000);
+    updateAircraftMarkers();
+  </script>
+
+  <script>
+    const firebaseConfig2 = {
       apiKey: "AIzaSyAbkgmgqYqatkhmfDKnLHa4S52z9Jcz1lw",
       authDomain: "mission-9dd26.firebaseapp.com",
       databaseURL: "https://mission-9dd26-default-rtdb.firebaseio.com",
@@ -164,65 +256,32 @@
       appId: "1:1080303837931:web:9b5ed2486bd6a2e70914ae",
       measurementId: "G-NWFV3RFGKV"
     };
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig2);
     const db = firebase.database();
-
     const missionKey = 'demo-mission';
+
     const chatMessagesEl = document.getElementById('chatMessages');
     const commsLogEl = document.getElementById('commsLog');
     const fileListEl = document.getElementById('fileList');
 
-    let username = localStorage.getItem('username');
+    let currentUser = null;
+    const users = {
+      "Kendrick Uhles": "Ku2023!@",
+      "Laramie Uhles": "Missions2025",
+      "Ryan Uhles": "IC2025!"
+    };
 
-    function showError(msg) {
-      const errorEl = document.getElementById('loginError');
-      errorEl.textContent = msg;
-      errorEl.style.display = 'block';
-    }
-
-    function setUsername() {
-      const name = document.getElementById('usernameInput').value.trim();
-      const password = document.getElementById('passwordInput').value;
-
-      if (!name || !password) {
-        showError("Both fields are required.");
-        return;
+    function loginUser() {
+      const user = document.getElementById("loginUsername").value.trim();
+      const pass = document.getElementById("loginPassword").value.trim();
+      if (users[user] && users[user] === pass) {
+        currentUser = user;
+        document.getElementById("adminLogin").style.display = "none";
+        document.getElementById("mainApp").style.display = "grid";
+        setTimeout(() => map.invalidateSize(), 1000); // increased timeout
+      } else {
+        document.getElementById("loginError").textContent = "Invalid login.";
       }
-
-      if (!(name in userPasswords)) {
-        showError("Unknown user.");
-        return;
-      }
-
-      if (password !== userPasswords[name]) {
-        showError("Incorrect password.");
-        return;
-      }
-
-      username = name;
-      localStorage.setItem('username', username);
-      document.getElementById('loginOverlay').style.display = 'none';
-      document.getElementById('loginError').style.display = 'none';
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-      document.getElementById('chatInput').disabled = false;
-    }
-
-    function logout() {
-      localStorage.removeItem('username');
-      username = null;
-      document.getElementById('loginOverlay').style.display = 'flex';
-      document.getElementById('logoutBtn').style.display = 'none';
-      document.getElementById('chatInput').disabled = true;
-    }
-
-    if (!username) {
-      document.getElementById('loginOverlay').style.display = 'flex';
-      document.getElementById('logoutBtn').style.display = 'none';
-      document.getElementById('chatInput').disabled = true;
-    } else {
-      document.getElementById('loginOverlay').style.display = 'none';
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-      document.getElementById('chatInput').disabled = false;
     }
 
     function getTimeStamp() {
@@ -233,12 +292,8 @@
     function sendChat() {
       const input = document.getElementById('chatInput');
       const msg = input.value.trim();
-      if (!msg || !username) return;
-      db.ref(`missions/${missionKey}/chat`).push({
-        text: msg,
-        time: getTimeStamp(),
-        user: username
-      });
+      if (!msg || !currentUser) return;
+      db.ref(`missions/${missionKey}/chat`).push({ text: msg, time: getTimeStamp(), user: currentUser });
       input.value = '';
     }
 
@@ -246,10 +301,7 @@
       const input = document.getElementById('commsInput');
       const entry = input.value.trim();
       if (!entry) return;
-      db.ref(`missions/${missionKey}/comms`).push({
-        text: entry,
-        time: getTimeStamp()
-      });
+      db.ref(`missions/${missionKey}/comms`).push({ text: entry, time: getTimeStamp() });
       input.value = '';
     }
 
@@ -266,10 +318,7 @@
       chatMessagesEl.innerHTML = '';
       if (data) Object.values(data).forEach(msg => {
         const div = document.createElement('div');
-        const name = msg.user || 'Unknown';
-        const time = msg.time || '??';
-        const text = msg.text || msg;
-        div.textContent = `[${time}] ${name}: ${text}`;
+        div.textContent = `[${msg.time || '??'}] ${msg.user || 'Unknown'}: ${msg.text || msg}`;
         chatMessagesEl.appendChild(div);
       });
     });
@@ -294,10 +343,30 @@
       });
     });
 
-    let map = L.map('map').setView([39.5, -98.35], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    function toggleProfileSearch() {
+      const box = document.getElementById("profileSearch");
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    function searchProfile() {
+      const name = document.getElementById("searchBox").value.trim();
+      const resultBox = document.getElementById("profileResult");
+      if (!name) {
+        resultBox.innerHTML = "";
+        return;
+      }
+      db.ref(`profiles/${name}`).once('value', snap => {
+        const data = snap.val();
+        if (data) {
+          resultBox.innerHTML = `<strong>${name}</strong><br><ul>` +
+            data.qualifications.map(q => `<li>${q}</li>`).join('') + '</ul>';
+        } else {
+          resultBox.innerHTML = 'Profile not found.';
+        }
+      });
+    }
+
+    window.addEventListener('resize', () => map.invalidateSize());
   </script>
 </body>
 </html>
