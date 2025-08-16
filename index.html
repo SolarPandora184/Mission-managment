@@ -85,6 +85,749 @@
       cursor: pointer;
       z-index: 1000;
     }
+    #logoutBtn, #voiceBtn, #settingsBtn {
+      position: fixed;
+      top: 15px;
+      background: red;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    #logoutBtn {
+      right: 15px;
+    }
+    #voiceBtn {
+      right: 115px;
+      background: green;
+    }
+    #settingsBtn {
+      right: 215px;
+      background: var(--highlight);
+    }
+    #profileSearch, #settingsDropdown {
+      display: none;
+      position: fixed;
+      background: var(--panel);
+      padding: 1rem;
+      border-radius: 8px;
+      z-index: 1000;
+      border: 1px solid var(--accent);
+    }
+    #profileSearch {
+      bottom: 60px;
+      right: 15px;
+      width: 300px;
+    }
+    #settingsDropdown {
+      top: 60px;
+      right: 215px;
+      width: 200px;
+    }
+    #statusBar {
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    #profileResult ul {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    #profileResult li {
+      background: var(--accent);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    #externalSystemFrame {
+      flex-grow: 1;
+      width: 100%;
+      border-radius: 8px;
+      min-height: 0;
+      border: none;
+    }
+    .system-option {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .system-option:hover {
+      background: var(--highlight);
+    }
+    #cookiesBanner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--panel);
+      border-top: 2px solid var(--accent);
+      padding: 1rem;
+      z-index: 2000;
+      display: none;
+    }
+    .cookies-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .cookies-text {
+      flex: 1;
+      min-width: 300px;
+    }
+    .cookies-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .cookies-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .accept-btn {
+      background: var(--highlight);
+      color: white;
+    }
+    .decline-btn {
+      background: var(--accent);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="adminLogin" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999">
+    <img src="Logo" alt="Logo" style="width:300px;margin-bottom:1rem" />
+    <h2>Login</h2>
+    <input id="loginUsername" placeholder="Username" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button onclick="loginUser()">Login</button>
+    <p id="loginError" style="color:red"></p>
+    <p style="margin-top:10px;">
+      <a href="https://forms.office.com/r/gDySnXnE7X" target="_blank" style="color:#3a8eed; text-decoration: underline;">
+        Sign up or Reset password
+      </a>
+    </p>
+  </div>
+
+  <div class="grid" id="mainApp" style="display:none">
+    <div class="panel">
+      <h2>Incident Command</h2>
+      <div id="chatMessages"></div>
+      <input type="text" id="chatInput" placeholder="Message #operations" />
+      <button onclick="sendChat()">Send</button>
+    </div>
+
+    <div class="panel">
+      <h2 id="systemTitle">Unit Tracking</h2>
+      <div id="statusBar">Loading CAP aircraft...</div>
+      <div id="map"></div>
+      <iframe id="externalSystemFrame" src="" style="display:none;"></iframe>
+    </div>
+
+    <div class="panel">
+      <h2>Comms Log</h2>
+      <div id="commsLog"></div>
+      <input type="text" id="commsInput" placeholder="Log entry" />
+      <button onclick="logComms()">Log</button>
+    </div>
+
+    <div class="panel">
+      <h2>File Sharing</h2>
+      <input type="file" id="fileUpload" />
+      <button onclick="uploadFile()">Upload</button>
+      <ul id="fileList"></ul>
+    </div>
+  </div>
+
+  <button id="profileBtn" onclick="toggleProfileSearch()">Search Profiles</button>
+  <button id="logoutBtn" onclick="logoutUser()" style="display:none">Logout</button>
+  <button id="voiceBtn" onclick="toggleVoiceChannel()" style="display:none">Join Voice</button>
+  <button id="settingsBtn" onclick="toggleSettings()" style="display:none">Settings</button>
+  
+  <div id="profileSearch">
+    <input type="text" id="searchBox" placeholder="Search by name..." />
+    <div id="profileResult" style="margin-top:10px"></div>
+  </div>
+
+  <div id="settingsDropdown">
+    <h3 style="margin-top:0;">External Systems</h3>
+    <a href="#" class="system-option" onclick="switchToSystem('map')">Unit Tracking (Map)</a>
+    <a href="#" class="system-option" onclick="switchToSystem('flightradar')">ADS-B Exchange</a>
+    <a href="#" class="system-option" onclick="switchToSystem('sartopo')">Sartopo</a>
+    <a href="#" class="system-option" onclick="switchToSystem('windy')">Windy.com</a>
+    <a href="#" class="system-option" onclick="switchToSystem('googlemaps')">Google Maps</a>
+  </div>
+
+  <div id="cookiesBanner">
+    <div class="cookies-content">
+      <div class="cookies-text">
+        <strong>We use local storage to remember your login</strong><br>
+        To keep you logged in on this device, we need to store your login information locally. No personal data is sent to external servers.
+      </div>
+      <div class="cookies-buttons">
+        <button class="cookies-btn accept-btn" onclick="acceptCookies()">Accept</button>
+        <button class="cookies-btn decline-btn" onclick="declineCookies()">Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const capApp = firebase.initializeApp({
+      apiKey: "AIzaSyDRaTNFRTV0SLdUgfjVnO0CQT44yuElDh0",
+      authDomain: "test-data-base-6da39.firebaseapp.com",
+      projectId: "test-data-base-6da39",
+      storageBucket: "test-data-base-6da39.appspot.com",
+      messagingSenderId: "342303847512",
+      appId: "1:342303847512:web:74688627a824be8130462d",
+      measurementId: "G-7XN8HCS0G1",
+      databaseURL: "https://test-data-base-6da39-default-rtdb.firebaseio.com"
+    }, "capApp");
+
+    const dbCAP = capApp.database();
+    const db = firebase.initializeApp({
+      apiKey: "AIzaSyAbkgmgqYqatkhmfDKnLHa4S52z9Jcz1lw",
+      authDomain: "mission-9dd26.firebaseapp.com",
+      databaseURL: "https://mission-9dd26-default-rtdb.firebaseio.com",
+      projectId: "mission-9dd26",
+      storageBucket: "mission-9dd26.appspot.com",
+      messagingSenderId: "1080303837931",
+      appId: "1:1080303837931:web:9b5ed2486bd6a2e70914ae",
+      measurementId: "G-NWFV3RFGKV"
+    }, "missionApp").database();
+
+    const missionKey = 'demo-mission';
+    const map = L.map('map').setView([37.5, -119], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const statusBar = document.getElementById('statusBar');
+    const markers = {};
+
+    // External system configuration
+    const externalSystems = {
+      flightradar: 'https://globe.adsbexchange.com/',
+      sartopo: 'https://sartopo.com/map.html#ll=38.80547,-98.39355&z=5&b=mbt',
+      windy: 'https://embed.windy.com/embed2.html?lat=37.500&lon=-119.000&detailLat=37.500&detailLon=-119.000&width=650&height=450&zoom=5&level=surface&overlay=wind&product=ecmwf&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1',
+      googlemaps: 'https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3048394.0906948!2d-119.0!3d37.5!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1234567890'
+    };
+
+    let currentSystem = 'map';
+
+    function switchToSystem(system) {
+      currentSystem = system;
+      const mapEl = document.getElementById('map');
+      const frameEl = document.getElementById('externalSystemFrame');
+      const titleEl = document.getElementById('systemTitle');
+      const statusEl = document.getElementById('statusBar');
+
+      if (system === 'map') {
+        mapEl.style.display = 'block';
+        frameEl.style.display = 'none';
+        titleEl.textContent = 'Unit Tracking';
+        statusEl.style.display = 'block';
+        setTimeout(() => map.invalidateSize(), 100);
+      } else if (system === 'flightradar') {
+        mapEl.style.display = 'none';
+        frameEl.style.display = 'block';
+        frameEl.src = externalSystems.flightradar;
+        titleEl.textContent = 'ADS-B Exchange';
+        statusEl.style.display = 'none';
+      } else if (system === 'sartopo') {
+        mapEl.style.display = 'none';
+        frameEl.style.display = 'block';
+        frameEl.src = externalSystems.sartopo;
+        titleEl.textContent = 'Sartopo';
+        statusEl.style.display = 'none';
+      } else if (system === 'windy') {
+        mapEl.style.display = 'none';
+        frameEl.style.display = 'block';
+        frameEl.src = externalSystems.windy;
+        titleEl.textContent = 'Windy.com';
+        statusEl.style.display = 'none';
+      } else if (system === 'googlemaps') {
+        mapEl.style.display = 'none';
+        frameEl.style.display = 'block';
+        frameEl.src = externalSystems.googlemaps;
+        titleEl.textContent = 'Google Maps';
+        statusEl.style.display = 'none';
+      }
+      
+      // Hide settings dropdown after selection
+      document.getElementById('settingsDropdown').style.display = 'none';
+    }
+
+    function toggleSettings() {
+      const dropdown = document.getElementById('settingsDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Close settings dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const settingsBtn = document.getElementById('settingsBtn');
+      const settingsDropdown = document.getElementById('settingsDropdown');
+      
+      if (!settingsBtn.contains(event.target) && !settingsDropdown.contains(event.target)) {
+        settingsDropdown.style.display = 'none';
+      }
+    });
+
+    async function fetchCAPAircraftList() {
+      const snap = await dbCAP.ref('capAircraft').once('value');
+      const data = snap.val();
+      return data ? Object.values(data).map(ac => ac.icao24.toLowerCase()) : [];
+    }
+
+    async function fetchLiveAircraft() {
+      const res = await fetch("https://opensky-network.org/api/states/all");
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.states || [];
+    }
+
+    async function updateAircraftMarkers() {
+      if (currentSystem !== 'map') return;
+      
+      const capIcaoList = await fetchCAPAircraftList();
+      const liveAircraft = await fetchLiveAircraft();
+      if (!liveAircraft) return statusBar.textContent = "Error loading live aircraft.";
+
+      statusBar.textContent = `Tracking ${capIcaoList.length} CAP aircraft`;
+      const active = new Set();
+
+      liveAircraft.forEach(state => {
+        const [icao, callsignRaw, , , , lng, lat, alt, , speed] = state;
+        const icaoLower = icao?.toLowerCase();
+        if (!capIcaoList.includes(icaoLower) || lat == null || lng == null) return;
+
+        active.add(icaoLower);
+        const callsign = callsignRaw?.trim() || 'N/A';
+
+        if (!markers[icaoLower]) {
+          markers[icaoLower] = L.marker([lat, lng]).addTo(map).bindPopup('Loading...');
+        } else {
+          markers[icaoLower].setLatLng([lat, lng]);
+        }
+
+        markers[icaoLower].setPopupContent(`
+          <b>Callsign:</b> ${callsign}<br>
+          <b>ICAO24:</b> ${icaoLower}<br>
+          <b>Alt:</b> ${alt?.toFixed(0) || 'N/A'} ft<br>
+          <b>Speed:</b> ${speed?.toFixed(0) || 'N/A'} kt
+        `);
+      });
+
+      for (const icao in markers) {
+        if (!active.has(icao)) {
+          map.removeLayer(markers[icao]);
+          delete markers[icao];
+        }
+      }
+    }
+
+    setInterval(updateAircraftMarkers, 15000);
+    updateAircraftMarkers();
+
+    const chatMessagesEl = document.getElementById('chatMessages');
+    const commsLogEl = document.getElementById('commsLog');
+    const fileListEl = document.getElementById('fileList');
+
+    let currentUser = null;
+    const users = {
+      "Kendrick Uhles": "Ku2023!@",
+      "Laramie Uhles": "Missions2025",
+      "Ryan Uhles": "IC2025!"
+    };
+
+    // Check for stored login on page load
+    window.addEventListener('load', function() {
+      const cookiesAccepted = localStorage.getItem('cookiesAccepted');
+      if (cookiesAccepted === 'true') {
+        const storedUser = localStorage.getItem('loggedInUser');
+        if (storedUser && users[storedUser]) {
+          autoLogin(storedUser);
+        }
+      } else if (cookiesAccepted === null) {
+        // Show cookies banner if not decided yet
+        document.getElementById('cookiesBanner').style.display = 'block';
+      }
+    });
+
+    function loginUser() {
+      const user = document.getElementById("loginUsername").value.trim();
+      const pass = document.getElementById("loginPassword").value.trim();
+      if (users[user] && users[user] === pass) {
+        performLogin(user);
+        
+        // Store login if cookies accepted
+        if (localStorage.getItem('cookiesAccepted') === 'true') {
+          localStorage.setItem('loggedInUser', user);
+        }
+      } else {
+        document.getElementById("loginError").textContent = "Invalid login.";
+      }
+    }
+
+    function autoLogin(user) {
+      performLogin(user);
+    }
+
+    function performLogin(user) {
+      currentUser = user;
+      document.getElementById("adminLogin").style.display = "none";
+      document.getElementById("mainApp").style.display = "grid";
+      document.getElementById("logoutBtn").style.display = "block";
+      document.getElementById("voiceBtn").style.display = "block";
+      document.getElementById("settingsBtn").style.display = "block";
+      setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    function logoutUser() {
+      leaveVoiceChannel(); // Leave voice before clearing currentUser
+      currentUser = null;
+      
+      // Clear stored login
+      localStorage.removeItem('loggedInUser');
+      
+      document.getElementById("mainApp").style.display = "none";
+      document.getElementById("adminLogin").style.display = "flex";
+      document.getElementById("logoutBtn").style.display = "none";
+      document.getElementById("voiceBtn").style.display = "none";
+      document.getElementById("settingsBtn").style.display = "none";
+    }
+
+    function getTimeStamp() {
+      const now = new Date();
+      return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg || !currentUser) return;
+      db.ref(`missions/${missionKey}/chat`).push({ text: msg, time: getTimeStamp(), user: currentUser });
+      input.value = '';
+    }
+
+    function logComms() {
+      const input = document.getElementById('commsInput');
+      const entry = input.value.trim();
+      if (!entry) return;
+      db.ref(`missions/${missionKey}/comms`).push({ text: entry, time: getTimeStamp() });
+      input.value = '';
+    }
+
+    function uploadFile() {
+      const input = document.getElementById('fileUpload');
+      if (!input.files.length) return;
+      const file = input.files[0];
+      db.ref(`missions/${missionKey}/files`).push({ name: file.name });
+      input.value = '';
+    }
+
+    db.ref(`missions/${missionKey}/chat`).on('value', snap => {
+      const data = snap.val();
+      chatMessagesEl.innerHTML = '';
+      if (data) Object.values(data).forEach(msg => {
+        const div = document.createElement('div');
+        div.textContent = `[${msg.time || '??'}] ${msg.user || 'Unknown'}: ${msg.text || msg}`;
+        chatMessagesEl.appendChild(div);
+      });
+    });
+
+    db.ref(`missions/${missionKey}/comms`).on('value', snap => {
+      const data = snap.val();
+      commsLogEl.innerHTML = '';
+      if (data) Object.values(data).forEach(entry => {
+        const div = document.createElement('div');
+        div.textContent = `${entry.time || '??'} - ${entry.text || entry}`;
+        commsLogEl.appendChild(div);
+      });
+    });
+
+    db.ref(`missions/${missionKey}/files`).on('value', snap => {
+      const data = snap.val();
+      fileListEl.innerHTML = '';
+      if (data) Object.values(data).forEach(file => {
+        const li = document.createElement('li');
+        li.textContent = file.name;
+        fileListEl.appendChild(li);
+      });
+    });
+
+    let debounceTimeout;
+    document.getElementById("searchBox").addEventListener("input", function () {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(searchProfile, 300);
+    });
+
+    function toggleProfileSearch() {
+      const box = document.getElementById("profileSearch");
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    function searchProfile() {
+      const name = document.getElementById("searchBox").value.trim();
+      const resultBox = document.getElementById("profileResult");
+      if (!name) return resultBox.innerHTML = "";
+      db.ref(`profiles/${name}`).once('value', snap => {
+        const data = snap.val();
+        if (!data) return resultBox.innerHTML = "<p>No profile found.</p>";
+        const ul = document.createElement("ul");
+        Object.keys(data).forEach(key => {
+          const li = document.createElement("li");
+          li.textContent = `${key}: ${data[key]}`;
+          ul.appendChild(li);
+        });
+        resultBox.innerHTML = "";
+        resultBox.appendChild(ul);
+      });
+    }
+
+    // Voice channel functionality
+    let peers = {};
+    let localStream = null;
+    let inVoiceChannel = false;
+    const voiceChannelId = `${missionKey}-voice`;
+
+    function toggleVoiceChannel() {
+      if (inVoiceChannel) {
+        leaveVoiceChannel();
+      } else {
+        joinVoiceChannel();
+      }
+    }
+
+    async function joinVoiceChannel() {
+      if (!currentUser) return;
+      
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Update button immediately when mic access is granted
+        inVoiceChannel = true;
+        document.getElementById('voiceBtn').textContent = 'Leave Voice';
+        document.getElementById('voiceBtn').style.background = 'red';
+        
+        // Add user to voice channel
+        await db.ref(`voice/${voiceChannelId}/users/${currentUser}`).set({
+          joined: Date.now(),
+          status: 'connected'
+        });
+
+        // Listen for new users joining
+        db.ref(`voice/${voiceChannelId}/users`).on('child_added', (snapshot) => {
+          const username = snapshot.key;
+          if (username !== currentUser && !peers[username]) {
+            console.log(`User ${username} joined voice channel`);
+            createPeerConnection(username, true);
+          }
+        });
+
+        // Listen for users leaving
+        db.ref(`voice/${voiceChannelId}/users`).on('child_removed', (snapshot) => {
+          const username = snapshot.key;
+          if (peers[username]) {
+            peers[username].destroy();
+            delete peers[username];
+            console.log(`User ${username} left voice channel`);
+          }
+        });
+
+        // Listen for signaling data
+        db.ref(`voice/${voiceChannelId}/signals/${currentUser}`).on('child_added', (snapshot) => {
+          const signalData = snapshot.val();
+          if (signalData.from !== currentUser && peers[signalData.from]) {
+            peers[signalData.from].signal(signalData.signal);
+          }
+          // Remove processed signal
+          snapshot.ref.remove();
+        });
+
+        console.log('Joined voice channel');
+
+      } catch (err) {
+        console.error('Error accessing microphone:', err);
+        alert('Could not access microphone. Please check permissions.');
+        leaveVoiceChannel();
+      }
+    }
+
+    function createPeerConnection(username, initiator) {
+      const peer = new SimplePeer({ 
+        initiator: initiator, 
+        stream: localStream 
+      });
+
+      peer.on('signal', (data) => {
+        // Send signal through Firebase
+        db.ref(`voice/${voiceChannelId}/signals/${username}`).push({
+          from: currentUser,
+          signal: data,
+          timestamp: Date.now()
+        });
+      });
+
+      peer.on('connect', () => {
+        console.log(`Connected to ${username}`);
+      });
+
+      peer.on('stream', (remoteStream) => {
+        console.log(`Receiving audio from ${username}`);
+        const audio = document.createElement('audio');
+        audio.srcObject = remoteStream;
+        audio.autoplay = true;
+        audio.id = `audio-${username}`;
+        document.body.appendChild(audio);
+      });
+
+      peer.on('error', (err) => {
+        console.error(`Peer connection error with ${username}:`, err);
+      });
+
+      peer.on('close', () => {
+        const audioElement = document.getElementById(`audio-${username}`);
+        if (audioElement) {
+          audioElement.remove();
+        }
+      });
+
+      peers[username] = peer;
+    }
+
+    function leaveVoiceChannel() {
+      if (!currentUser) return;
+
+      // Remove from Firebase
+      db.ref(`voice/${voiceChannelId}/users/${currentUser}`).remove();
+      
+      // Clean up listeners
+      db.ref(`voice/${voiceChannelId}/users`).off();
+      db.ref(`voice/${voiceChannelId}/signals/${currentUser}`).off();
+
+      // Close all peer connections
+      Object.keys(peers).forEach(username => {
+        peers[username].destroy();
+        const audioElement = document.getElementById(`audio-${username}`);
+        if (audioElement) {
+          audioElement.remove();
+        }
+      });
+      peers = {};
+
+      // Stop local stream
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      inVoiceChannel = false;
+      document.getElementById('voiceBtn').textContent = 'Join Voice';
+      document.getElementById('voiceBtn').style.background = 'green';
+      
+      console.log('Left voice channel');
+    }
+
+    // Allow Enter key to send messages
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendChat();
+      }
+    });
+
+    document.getElementById('commsInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        logComms();
+      }
+    });
+
+    document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        loginUser();
+      }
+    });
+
+    // Cookies banner functions
+    function acceptCookies() {
+      localStorage.setItem('cookiesAccepted', 'true');
+      document.getElementById('cookiesBanner').style.display = 'none';
+    }
+
+    function declineCookies() {
+      localStorage.setItem('cookiesAccepted', 'false');
+      document.getElementById('cookiesBanner').style.display = 'none';
+    }
+  </script>
+</body>
+</html>      background: var(--panel);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+      min-height: 0;
+    }
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      border-bottom: 1px solid var(--accent);
+      padding-bottom: 5px;
+    }
+    #map {
+      flex-grow: 1;
+      width: 100%;
+      border-radius: 8px;
+      min-height: 0;
+    }
+    #chatMessages, #commsLog, #fileList {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--accent);
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    input, button, textarea {
+      background: #2a2f38;
+      color: white;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 0.5rem;
+      margin-top: 5px;
+    }
+    #fileList li { padding: 5px 0; border-bottom: 1px solid #444; }
+    #chatInput, #commsInput { width: 100%; }
+    #profileBtn {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      background: var(--highlight);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 1000;
+    }
     #logoutBtn, #voiceBtn {
       position: fixed;
       top: 15px;
